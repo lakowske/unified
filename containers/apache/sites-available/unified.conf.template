@@ -1,0 +1,84 @@
+# Virtual Host configuration for unified project
+# Serves the unified web application
+
+<VirtualHost *:80>
+    ServerName localhost
+    ServerAlias unified.local
+    DocumentRoot /var/www/unified
+    DirectoryIndex index.php index.html
+
+    # Logging
+    ErrorLog ${APACHE_LOG_DIR}/unified_error.log
+    CustomLog ${APACHE_LOG_DIR}/unified_access.log combined
+
+    # PHP Configuration
+    <FilesMatch \.php$>
+        SetHandler application/x-httpd-php
+    </FilesMatch>
+
+    # Security and performance
+    <Directory /var/www/unified>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        # Enable compression
+        <IfModule mod_deflate.c>
+            AddOutputFilterByType DEFLATE text/plain
+            AddOutputFilterByType DEFLATE text/html
+            AddOutputFilterByType DEFLATE text/xml
+            AddOutputFilterByType DEFLATE text/css
+            AddOutputFilterByType DEFLATE application/xml
+            AddOutputFilterByType DEFLATE application/xhtml+xml
+            AddOutputFilterByType DEFLATE application/rss+xml
+            AddOutputFilterByType DEFLATE application/javascript
+            AddOutputFilterByType DEFLATE application/x-javascript
+        </IfModule>
+    </Directory>
+
+    # Health check endpoint
+    Alias /health /var/www/unified/health.php
+
+    # API endpoints (for future use)
+    <Location "/api">
+        SetEnvIf Request_URI "^/api" is_api
+        Header set Content-Type "application/json" env=is_api
+    </Location>
+
+    # Static assets caching
+    <LocationMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg)$">
+        ExpiresActive On
+        ExpiresDefault "access plus 1 month"
+        Header set Cache-Control "public, max-age=2592000"
+    </LocationMatch>
+
+    # Environment variables for PHP
+    SetEnv UNIFIED_DB_HOST ${UNIFIED_DB_HOST}
+    SetEnv UNIFIED_DB_PORT ${UNIFIED_DB_PORT}
+    SetEnv UNIFIED_DB_NAME ${UNIFIED_DB_NAME}
+    SetEnv UNIFIED_DB_USER ${UNIFIED_DB_USER}
+    SetEnv UNIFIED_DB_PASSWORD ${UNIFIED_DB_PASSWORD}
+    SetEnv UNIFIED_DB_SCHEMA ${UNIFIED_DB_SCHEMA}
+</VirtualHost>
+
+# HTTPS configuration (optional - for production)
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    ServerName localhost
+    ServerAlias unified.local
+    DocumentRoot /var/www/unified
+    DirectoryIndex index.php index.html
+
+    # SSL Configuration
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem
+    SSLCertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
+
+    # Logging
+    ErrorLog ${APACHE_LOG_DIR}/unified_ssl_error.log
+    CustomLog ${APACHE_LOG_DIR}/unified_ssl_access.log combined
+
+    # Include same configuration as HTTP
+    Include /etc/apache2/sites-available/unified.conf
+</VirtualHost>
+</IfModule>

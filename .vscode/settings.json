@@ -2,10 +2,11 @@
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,
     "python.testing.pytestArgs": [
-        "tests"
+      "tests"
     ],
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
     "python.defaultInterpreterPath": "./.venv/bin/python",
+    "python.terminal.activateEnvironment": false,
 
     // Disable all old Python extension linting (deprecated)
     "python.linting.enabled": false,
@@ -55,5 +56,10 @@
   // Markdownlint configuration
   "markdownlint.config": {
     "extends": ".markdownlint.json"
-  }
+  },
+
+  // Claude permissions
+  "claude.allowedDirectories": [
+    "../poststack"
+  ]
 }

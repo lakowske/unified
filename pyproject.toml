@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "requests",
+    "poststack @ file:///home/seth/Software/dev/poststack",
 ]
 
 [tool.setuptools.packages.find]
