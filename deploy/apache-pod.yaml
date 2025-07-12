@@ -10,6 +10,24 @@ metadata:
     managed-by: poststack
     project: unified
 spec:
+  initContainers:
+  - name: setup-volumes
+    image: localhost/unified/apache:latest
+    command: ['/bin/bash', '-c']
+    args:
+    - |
+      echo "Setting up Apache volume permissions..."
+      mkdir -p /var/log/apache2 /etc/apache2/conf.d
+      chown -R www-data:www-data /var/log/apache2
+      chmod 755 /var/log/apache2
+      chown -R www-data:www-data /etc/apache2/conf.d
+      chmod 755 /etc/apache2/conf.d
+      echo "Volume setup complete"
+    volumeMounts:
+    - name: apache-logs
+      mountPath: /var/log/apache2
+    - name: apache-config
+      mountPath: /etc/apache2/conf.d
   containers:
   - name: apache-web
     image: localhost/unified/apache:latest
@@ -21,21 +39,21 @@ spec:
       hostPort: ${APACHE_HTTPS_PORT:-8443}
       protocol: TCP
     env:
-    # Poststack automatically provides these database variables
+    # Database connection variables
     - name: DATABASE_URL
-      value: "${POSTSTACK_DATABASE_URL}"
-    - name: POSTSTACK_ENVIRONMENT
-      value: "${POSTSTACK_ENVIRONMENT}"
+      value: "postgresql://${DB_USER}:${DB_PASSWORD}@host.containers.internal:${DB_PORT}/${DB_NAME}"
+    - name: ENVIRONMENT
+      value: "${ENVIRONMENT}"
     - name: DB_HOST
-      value: "${POSTSTACK_DB_HOST}"
+      value: "host.containers.internal"
     - name: DB_PORT
-      value: "${POSTSTACK_DB_PORT}"
+      value: "${DB_PORT}"
     - name: DB_NAME
-      value: "${POSTSTACK_DB_NAME}"
+      value: "${DB_NAME}"
     - name: DB_USER
-      value: "${POSTSTACK_DB_USER}"
+      value: "${DB_USER}"
     - name: DB_PASSWORD
-      value: "${POSTSTACK_DB_PASSWORD}"
+      value: "${DB_PASSWORD}"
     # User-defined environment-specific variables
     - name: LOG_LEVEL
       value: "${LOG_LEVEL}"

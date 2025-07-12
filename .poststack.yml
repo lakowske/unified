@@ -9,15 +9,31 @@ project:
 environments:
   # Development environment - for local development
   dev:
-    postgres:
-      database: unified_dev
-      port: 5436
-      user: unified_dev_user
-      password: auto_generated
-      host: host.containers.internal
+    deployments:
+      - name: postgres
+        type: postgres
+        pod: deploy/postgres-pod.yaml
+        variables:
+          DB_NAME: unified_dev
+          DB_PORT: "5436"
+          DB_USER: unified_dev_user
+          DB_PASSWORD: "dev_password123"
+      - name: apache
+        type: web
+        pod: deploy/apache-pod.yaml
+        depends_on: [postgres]
+        variables:
+          # Database connection variables (from postgres deployment)
+          DB_NAME: unified_dev
+          DB_PORT: "5436"
+          DB_USER: unified_dev_user
+          DB_PASSWORD: "dev_password123"
+          # Apache-specific variables
+          SERVER_NAME: dev.unified.local
+          SERVER_ADMIN: dev@unified.local
+          APACHE_LOG_LEVEL: debug
+          ENVIRONMENT: dev
     init: []  # No init containers needed for dev
-    deployment:
-      pod: deploy/apache-pod.yaml
     volumes:
       postgres_data:
         type: named
@@ -32,28 +48,43 @@ environments:
         size: "1Gi"
       apache_config:
         type: emptyDir
+      dovecot_mail:
+        type: named
+        size: "500Mi"
+      dovecot_logs:
+        type: named
+        size: "100Mi"
+      dovecot_config:
+        type: emptyDir
     variables:
       LOG_LEVEL: debug
       DEBUG_MODE: "true"
       CACHE_TTL: "60"
       APACHE_HOST_PORT: "8080"
       APACHE_HTTPS_PORT: "8443"
-      SERVER_NAME: "dev.unified.local"
-      SERVER_ADMIN: "dev@unified.local"
-      APACHE_LOG_LEVEL: "debug"
       APP_VERSION: "dev-latest"
+      POSTSTACK_ENVIRONMENT: dev
 
   # Staging environment - for testing before production
   staging:
-    postgres:
-      database: unified_staging
-      port: 5434
-      user: unified_staging_user
-      password: auto_generated
-      host: localhost
+    deployments:
+      - name: postgres
+        type: postgres
+        pod: deploy/postgres-pod.yaml
+        variables:
+          DB_NAME: unified_staging
+          DB_PORT: "5434"
+          DB_USER: unified_staging_user
+          DB_PASSWORD: "dev_password123"
+      - name: apache
+        type: web
+        pod: deploy/apache-pod.yaml
+        depends_on: [postgres]
+        variables:
+          SERVER_NAME: staging.unified.local
+          SERVER_ADMIN: staging@unified.local
+          APACHE_LOG_LEVEL: info
     init: []  # Could add migration containers here in the future
-    deployment:
-      pod: deploy/apache-pod.yaml
     variables:
       LOG_LEVEL: info
       DEBUG_MODE: "false"
@@ -67,15 +98,24 @@ environments:
 
   # Production environment - for live deployment
   production:
-    postgres:
-      database: unified_prod
-      port: 5435
-      user: unified_prod_user
-      password: auto_generated
-      host: localhost
+    deployments:
+      - name: postgres
+        type: postgres
+        pod: deploy/postgres-pod.yaml
+        variables:
+          DB_NAME: unified_prod
+          DB_PORT: "5435"
+          DB_USER: unified_prod_user
+          DB_PASSWORD: "dev_password123"
+      - name: apache
+        type: web
+        pod: deploy/apache-pod.yaml
+        depends_on: [postgres]
+        variables:
+          SERVER_NAME: unified.example.com
+          SERVER_ADMIN: admin@unified.example.com
+          APACHE_LOG_LEVEL: warn
     init: []  # Would typically have migrations and data seeding
-    deployment:
-      pod: deploy/apache-pod.yaml
     variables:
       LOG_LEVEL: warn
       DEBUG_MODE: "false"

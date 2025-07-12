@@ -7,11 +7,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: postgres-${POSTSTACK_ENVIRONMENT}
+  name: unified-postgres-${ENVIRONMENT}
   labels:
     app: postgres
-    environment: ${POSTSTACK_ENVIRONMENT}
+    environment: ${ENVIRONMENT}
     managed-by: poststack
+    project: unified
     component: database
 spec:
   containers:
@@ -19,16 +20,16 @@ spec:
     image: localhost/poststack/postgres:latest
     ports:
     - containerPort: 5432
-      hostPort: ${POSTSTACK_DB_PORT}
+      hostPort: ${DB_PORT}
       protocol: TCP
     env:
-    # Database configuration from poststack environment
+    # Database configuration
     - name: POSTGRES_DB
-      value: "${POSTSTACK_DB_NAME}"
+      value: "${DB_NAME}"
     - name: POSTGRES_USER
-      value: "${POSTSTACK_DB_USER}"
+      value: "${DB_USER}"
     - name: POSTGRES_PASSWORD
-      value: "${POSTSTACK_DB_PASSWORD}"
+      value: "${DB_PASSWORD}"
     - name: POSTGRES_HOST_AUTH_METHOD
       value: "trust"
 
@@ -38,16 +39,16 @@ spec:
     - name: POSTGRES_INITDB_ARGS
       value: "--auth-host=trust --auth-local=peer"
 
-    # Poststack environment info
-    - name: POSTSTACK_ENVIRONMENT
-      value: "${POSTSTACK_ENVIRONMENT}"
-    - name: POSTSTACK_CONFIG_DIR
+    # Environment info
+    - name: ENVIRONMENT
+      value: "${ENVIRONMENT}"
+    - name: CONFIG_DIR
       value: "/data/config"
-    - name: POSTSTACK_CERT_PATH
+    - name: CERT_PATH
       value: "/data/certificates"
-    - name: POSTSTACK_BASE_DIR
+    - name: BASE_DIR
       value: "/data"
-    - name: POSTSTACK_LOG_DIR
+    - name: LOG_DIR
       value: "/data/logs"
 
     volumeMounts:
@@ -101,7 +102,7 @@ spec:
 # Configuration Notes:
 #
 # 1. Environment Variables:
-#    Variables like ${POSTSTACK_DB_NAME} are substituted by poststack
+#    Variables like ${DB_NAME} are substituted by poststack
 #    at deployment time based on your .poststack.yml configuration.
 #
 # 2. Volumes:
