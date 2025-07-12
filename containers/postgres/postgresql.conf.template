@@ -1,0 +1,44 @@
+# PostgreSQL Configuration Template for Poststack
+# This template will be processed by the entrypoint script
+
+# Connection settings
+listen_addresses = '*'
+port = 5432
+max_connections = $POSTGRES_MAX_CONNECTIONS
+
+# Memory settings
+shared_buffers = $POSTGRES_SHARED_BUFFERS
+effective_cache_size = $POSTGRES_EFFECTIVE_CACHE_SIZE
+
+# Logging
+log_destination = 'stderr'
+logging_collector = off
+log_min_duration_statement = $POSTGRES_LOG_MIN_DURATION
+log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+log_statement = 'none'
+
+# SSL settings (will be configured if certificates are available)
+ssl = $POSTGRES_SSL_MODE
+ssl_cert_file = '$POSTGRES_SSL_CERT_FILE'
+ssl_key_file = '$POSTGRES_SSL_KEY_FILE'
+
+# Performance tuning
+checkpoint_completion_target = 0.9
+wal_buffers = 16MB
+default_statistics_target = 100
+
+# Locale settings
+lc_messages = 'C'
+lc_monetary = 'C'
+lc_numeric = 'C'
+lc_time = 'C'
+
+# Default configuration for sorting
+default_text_search_config = 'pg_catalog.english'
+
+# Archive settings (for backup/replication if needed)
+archive_mode = $POSTGRES_ARCHIVE_MODE
+archive_command = '$POSTGRES_ARCHIVE_COMMAND'
+
+# Timezone
+timezone = '$TZ'
