@@ -2,13 +2,10 @@
 -- This creates a comprehensive users schema supporting multiple services
 -- with proper authentication and authorization for Apache, Dovecot, and future services
 
--- Create the unified schema if it doesn't exist
-CREATE SCHEMA IF NOT EXISTS unified;
-
 -- ================================================================
 -- CORE USER IDENTITY TABLE
 -- ================================================================
-CREATE TABLE unified.users (
+CREATE TABLE unified.users_v2 (
     id SERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -51,7 +48,7 @@ CREATE TABLE unified.users (
 -- ================================================================
 CREATE TABLE unified.user_passwords (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES unified.users(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES unified.users_v2(id) ON DELETE CASCADE,
     service VARCHAR(50) NOT NULL,
 
     -- Password in format expected by service
@@ -70,11 +67,11 @@ CREATE TABLE unified.user_passwords (
 -- SIMPLIFIED ROLES FOR SERVICE COMPATIBILITY
 -- ================================================================
 CREATE TABLE unified.user_roles (
-    user_id INTEGER REFERENCES unified.users(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES unified.users_v2(id) ON DELETE CASCADE,
     role_name VARCHAR(50) NOT NULL, -- 'admin', 'user', 'customer', 'no_email'
     service VARCHAR(50) NOT NULL,   -- 'apache', 'dovecot', 'webdav', 'samba'
     granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    granted_by INTEGER REFERENCES unified.users(id),
+    granted_by INTEGER REFERENCES unified.users_v2(id),
     PRIMARY KEY (user_id, service)
 );
 
@@ -82,7 +79,7 @@ CREATE TABLE unified.user_roles (
 -- SERVICE QUOTAS AND LIMITS
 -- ================================================================
 CREATE TABLE unified.user_quotas (
-    user_id INTEGER REFERENCES unified.users(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES unified.users_v2(id) ON DELETE CASCADE,
     service VARCHAR(50) NOT NULL,
     quota_type VARCHAR(50) NOT NULL, -- 'storage', 'bandwidth', 'connections'
     quota_value BIGINT, -- bytes, count, etc.
@@ -96,7 +93,7 @@ CREATE TABLE unified.user_quotas (
 -- ================================================================
 CREATE TABLE unified.email_aliases (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES unified.users(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES unified.users_v2(id) ON DELETE CASCADE,
     alias_email VARCHAR(255) NOT NULL UNIQUE,
     is_primary BOOLEAN DEFAULT false,
     is_active BOOLEAN DEFAULT true,
@@ -106,9 +103,9 @@ CREATE TABLE unified.email_aliases (
 -- ================================================================
 -- AUDIT LOG
 -- ================================================================
-CREATE TABLE unified.audit_log (
+CREATE TABLE unified.audit_log_v2 (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES unified.users(id),
+    user_id INTEGER REFERENCES unified.users_v2(id),
     service VARCHAR(50),
     action VARCHAR(100), -- 'login', 'logout', 'password_change', 'role_grant', etc.
     resource VARCHAR(500), -- what was accessed/modified
@@ -134,7 +131,7 @@ SELECT
          ELSE 'customer' END as role,
     u.is_active,
     u.email_verified
-FROM unified.users u
+FROM unified.users_v2 u
 JOIN unified.user_passwords up ON u.id = up.user_id
 LEFT JOIN unified.user_roles ur ON u.id = ur.user_id AND ur.service = 'apache'
 WHERE u.is_active = true
@@ -150,7 +147,7 @@ SELECT
     up.password_hash as password,
     up.hash_scheme as scheme,
     u.is_active
-FROM unified.users u
+FROM unified.users_v2 u
 JOIN unified.user_passwords up ON u.id = up.user_id
 LEFT JOIN unified.user_roles ur ON u.id = ur.user_id AND ur.service = 'dovecot'
 WHERE u.is_active = true
@@ -168,7 +165,7 @@ SELECT
     u.system_gid as gid,
     u.mailbox_format,
     COALESCE(q.quota_value, 1073741824) as quota_bytes -- default 1GB
-FROM unified.users u
+FROM unified.users_v2 u
 LEFT JOIN unified.user_quotas q ON u.id = q.user_id
     AND q.service = 'dovecot'
     AND q.quota_type = 'storage'
@@ -179,10 +176,10 @@ WHERE u.is_active = true;
 -- ================================================================
 
 -- Core user lookups
-CREATE INDEX idx_users_email ON unified.users(email);
-CREATE INDEX idx_users_username ON unified.users(username);
-CREATE INDEX idx_users_domain ON unified.users(domain);
-CREATE INDEX idx_users_active ON unified.users(is_active);
+CREATE INDEX idx_users_v2_email ON unified.users_v2(email);
+CREATE INDEX idx_users_v2_username ON unified.users_v2(username);
+CREATE INDEX idx_users_v2_domain ON unified.users_v2(domain);
+CREATE INDEX idx_users_v2_active ON unified.users_v2(is_active);
 
 -- Password lookups
 CREATE INDEX idx_user_passwords_service ON unified.user_passwords(service);
@@ -193,16 +190,16 @@ CREATE INDEX idx_user_roles_service ON unified.user_roles(service);
 CREATE INDEX idx_user_roles_user_service ON unified.user_roles(user_id, service);
 
 -- Audit queries
-CREATE INDEX idx_audit_log_user_id ON unified.audit_log(user_id);
-CREATE INDEX idx_audit_log_service ON unified.audit_log(service);
-CREATE INDEX idx_audit_log_created_at ON unified.audit_log(created_at);
+CREATE INDEX idx_audit_log_v2_user_id ON unified.audit_log_v2(user_id);
+CREATE INDEX idx_audit_log_v2_service ON unified.audit_log_v2(service);
+CREATE INDEX idx_audit_log_v2_created_at ON unified.audit_log_v2(created_at);
 
 -- ================================================================
 -- FUNCTIONS FOR COMMON OPERATIONS
 -- ================================================================
 
 -- Function to automatically extract domain from email
-CREATE OR REPLACE FUNCTION unified.extract_domain_from_email()
+CREATE OR REPLACE FUNCTION unified.extract_domain_from_email_v2()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Extract domain from email address
@@ -218,13 +215,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically set domain and home directory
-CREATE TRIGGER trigger_extract_domain_from_email
-    BEFORE INSERT OR UPDATE ON unified.users
+CREATE TRIGGER trigger_extract_domain_from_email_v2
+    BEFORE INSERT OR UPDATE ON unified.users_v2
     FOR EACH ROW
-    EXECUTE FUNCTION unified.extract_domain_from_email();
+    EXECUTE FUNCTION unified.extract_domain_from_email_v2();
 
 -- Function to update timestamp on record changes
-CREATE OR REPLACE FUNCTION unified.update_updated_at_column()
+CREATE OR REPLACE FUNCTION unified.update_updated_at_column_v2()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
@@ -233,17 +230,17 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at timestamp
-CREATE TRIGGER trigger_users_updated_at
-    BEFORE UPDATE ON unified.users
+CREATE TRIGGER trigger_users_v2_updated_at
+    BEFORE UPDATE ON unified.users_v2
     FOR EACH ROW
-    EXECUTE FUNCTION unified.update_updated_at_column();
+    EXECUTE FUNCTION unified.update_updated_at_column_v2();
 
 -- ================================================================
 -- SAMPLE DATA FOR TESTING
 -- ================================================================
 
 -- Insert sample users for testing
-INSERT INTO unified.users (username, email, first_name, last_name, email_verified) VALUES
+INSERT INTO unified.users_v2 (username, email, first_name, last_name, email_verified) VALUES
 ('admin', 'admin@unified.local', 'System', 'Administrator', true),
 ('testuser', 'testuser@unified.local', 'Test', 'User', true),
 ('customer1', 'customer1@unified.local', 'Customer', 'One', true);
