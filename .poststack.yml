@@ -12,7 +12,7 @@ environments:
     deployments:
       - name: postgres
         type: postgres
-        pod: deploy/postgres-pod.yaml
+        pod: containers/postgres/postgres-pod.yaml
         variables:
           DB_NAME: unified_dev
           DB_PORT: "5436"
@@ -20,19 +20,13 @@ environments:
           DB_PASSWORD: "dev_password123"
       - name: apache
         type: web
-        pod: deploy/apache-pod.yaml
+        pod: containers/apache/apache-pod.yaml
         depends_on: [postgres]
         variables:
-          # Database connection variables (from postgres deployment)
-          DB_NAME: unified_dev
-          DB_PORT: "5436"
-          DB_USER: unified_dev_user
-          DB_PASSWORD: "dev_password123"
           # Apache-specific variables
           SERVER_NAME: dev.unified.local
           SERVER_ADMIN: dev@unified.local
           APACHE_LOG_LEVEL: debug
-          ENVIRONMENT: dev
     init: []  # No init containers needed for dev
     volumes:
       postgres_data:
@@ -70,7 +64,7 @@ environments:
     deployments:
       - name: postgres
         type: postgres
-        pod: deploy/postgres-pod.yaml
+        pod: containers/postgres/postgres-pod.yaml
         variables:
           DB_NAME: unified_staging
           DB_PORT: "5434"
@@ -78,7 +72,7 @@ environments:
           DB_PASSWORD: "dev_password123"
       - name: apache
         type: web
-        pod: deploy/apache-pod.yaml
+        pod: containers/apache/apache-pod.yaml
         depends_on: [postgres]
         variables:
           SERVER_NAME: staging.unified.local
@@ -101,7 +95,7 @@ environments:
     deployments:
       - name: postgres
         type: postgres
-        pod: deploy/postgres-pod.yaml
+        pod: containers/postgres/postgres-pod.yaml
         variables:
           DB_NAME: unified_prod
           DB_PORT: "5435"
@@ -109,7 +103,7 @@ environments:
           DB_PASSWORD: "dev_password123"
       - name: apache
         type: web
-        pod: deploy/apache-pod.yaml
+        pod: containers/apache/apache-pod.yaml
         depends_on: [postgres]
         variables:
           SERVER_NAME: unified.example.com
