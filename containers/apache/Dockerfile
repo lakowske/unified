@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache modules
-RUN a2enmod rewrite ssl headers
+RUN a2enmod rewrite ssl headers deflate expires
 
 # Create application directory
 RUN mkdir -p /var/www/unified
@@ -39,4 +39,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Set entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["apache2", "-D", "FOREGROUND"]
+CMD ["apache2ctl", "-D", "FOREGROUND"]

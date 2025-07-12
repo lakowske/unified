@@ -61,24 +61,5 @@
     SetEnv UNIFIED_DB_SCHEMA ${UNIFIED_DB_SCHEMA}
 </VirtualHost>
 
-# HTTPS configuration (optional - for production)
-<IfModule mod_ssl.c>
-<VirtualHost *:443>
-    ServerName localhost
-    ServerAlias unified.local
-    DocumentRoot /var/www/unified
-    DirectoryIndex index.php index.html
-
-    # SSL Configuration
-    SSLEngine on
-    SSLCertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem
-    SSLCertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
-
-    # Logging
-    ErrorLog ${APACHE_LOG_DIR}/unified_ssl_error.log
-    CustomLog ${APACHE_LOG_DIR}/unified_ssl_access.log combined
-
-    # Include same configuration as HTTP
-    Include /etc/apache2/sites-available/unified.conf
-</VirtualHost>
-</IfModule>
+# HTTPS configuration disabled for development
+# Uncomment and configure SSL certificates for production use

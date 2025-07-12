@@ -26,11 +26,11 @@ LogFormat "%{Referer}i -> %U" referer
 LogFormat "%{User-agent}i" agent
 
 # Include module configuration
-IncludeOptional mods-enabled/*.load
-IncludeOptional mods-enabled/*.conf
+IncludeOptional /etc/apache2/mods-enabled/*.load
+IncludeOptional /etc/apache2/mods-enabled/*.conf
 
 # Include ports configuration
-Include ports.conf
+Include /etc/apache2/ports.conf
 
 # Directory permissions
 <Directory />
@@ -50,16 +50,7 @@ Include ports.conf
     Require all granted
 </Directory>
 
-# Security headers
-Header always set X-Content-Type-Options nosniff
-Header always set X-Frame-Options DENY
-Header always set X-XSS-Protection "1; mode=block"
-Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
-
-# PHP Configuration
-<FilesMatch ".+\.php$">
-    SetHandler application/x-httpd-php
-</FilesMatch>
+# Note: Security headers and PHP configuration are handled in the virtual host
 
 # Unified project specific configuration
 <Directory "/var/www/unified">
@@ -69,4 +60,4 @@ Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains
 </Directory>
 
 # Include site configurations
-IncludeOptional sites-enabled/*.conf
+IncludeOptional /etc/apache2/sites-enabled/*.conf
