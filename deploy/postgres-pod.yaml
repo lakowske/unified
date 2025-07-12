@@ -90,11 +90,11 @@ spec:
 
   volumes:
   - name: postgres-data
-    emptyDir: {}
+    ${VOLUME_POSTGRES_DATA_TYPE}: ${VOLUME_POSTGRES_DATA_CONFIG}
   - name: postgres-logs
-    emptyDir: {}
+    ${VOLUME_POSTGRES_LOGS_TYPE}: ${VOLUME_POSTGRES_LOGS_CONFIG}
   - name: postgres-config
-    emptyDir: {}
+    ${VOLUME_POSTGRES_CONFIG_TYPE}: ${VOLUME_POSTGRES_CONFIG_CONFIG}
 
   restartPolicy: Always
 
@@ -105,8 +105,20 @@ spec:
 #    at deployment time based on your .poststack.yml configuration.
 #
 # 2. Volumes:
-#    By default, this uses emptyDir volumes which don't persist data.
-#    For production, consider using persistentVolumeClaim volumes.
+#    Volume configuration is controlled by the 'volumes' section in .poststack.yml.
+#    Variables like ${VOLUME_POSTGRES_DATA_TYPE} are generated automatically:
+#    - emptyDir: Data is lost when pod restarts (default)
+#    - persistentVolumeClaim: Data persists across restarts (named volumes)
+#    - hostPath: Data stored on host filesystem
+#
+#    Example volume configuration in .poststack.yml:
+#    volumes:
+#      postgres_data:
+#        type: named
+#        size: "2Gi"
+#      postgres_logs:
+#        type: named
+#        size: "500Mi"
 #
 # 3. Resource Limits:
 #    Adjust memory and CPU limits based on your workload requirements.

@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apache2 \
     apache2-utils \
     libapache2-mod-php \
+    libaprutil1-dbd-pgsql \
     php \
     php-pgsql \
     php-json \
@@ -16,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache modules
-RUN a2enmod rewrite ssl headers deflate expires
+RUN a2enmod rewrite ssl headers deflate expires dbd authn_dbd
 
 # Create application directory
 RUN mkdir -p /var/www/unified
@@ -25,6 +26,9 @@ RUN mkdir -p /var/www/unified
 COPY containers/apache/apache2.conf.template /etc/apache2/apache2.conf.template
 COPY containers/apache/sites-available/unified.conf.template /etc/apache2/sites-available/unified.conf.template
 COPY containers/apache/entrypoint.sh /entrypoint.sh
+
+# Copy web content
+COPY src/www/ /var/www/unified/
 
 # Set proper permissions
 RUN chmod +x /entrypoint.sh

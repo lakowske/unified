@@ -14,10 +14,24 @@ environments:
       port: 5436
       user: unified_dev_user
       password: auto_generated
-      host: localhost
+      host: host.containers.internal
     init: []  # No init containers needed for dev
     deployment:
       pod: deploy/apache-pod.yaml
+    volumes:
+      postgres_data:
+        type: named
+        size: "2Gi"
+      postgres_logs:
+        type: named
+        size: "500Mi"
+      postgres_config:
+        type: emptyDir
+      apache_logs:
+        type: named
+        size: "1Gi"
+      apache_config:
+        type: emptyDir
     variables:
       LOG_LEVEL: debug
       DEBUG_MODE: "true"

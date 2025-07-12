@@ -25,6 +25,10 @@ export UNIFIED_DB_SCHEMA=${UNIFIED_DB_SCHEMA:-unified}
 # Create run directory
 mkdir -p $APACHE_RUN_DIR
 
+# Ensure log directory exists and has proper permissions
+mkdir -p $APACHE_LOG_DIR
+chown -R www-data:www-data $APACHE_LOG_DIR
+
 # Process configuration templates
 echo "Processing Apache configuration templates..."
 
@@ -38,66 +42,39 @@ envsubst < /etc/apache2/sites-available/unified.conf.template > /etc/apache2/sit
 a2ensite unified
 a2dissite 000-default
 
-# Create a simple health check endpoint
-mkdir -p /var/www/unified
-cat > /var/www/unified/health.php << 'EOF'
-<?php
-header('Content-Type: application/json');
-echo json_encode([
-    'status' => 'healthy',
-    'service' => 'unified-apache',
-    'timestamp' => date('c'),
-    'database' => [
-        'host' => $_ENV['UNIFIED_DB_HOST'] ?? 'localhost',
-        'port' => $_ENV['UNIFIED_DB_PORT'] ?? '5435',
-        'schema' => $_ENV['UNIFIED_DB_SCHEMA'] ?? 'unified'
-    ]
-]);
-?>
-EOF
+# Wait for database to be ready and schema to exist
+echo "Waiting for database to be ready..."
+max_attempts=30
+attempt=0
 
-# Create a simple index page
-cat > /var/www/unified/index.php << 'EOF'
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Unified Project</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .status { background: #e8f5e8; padding: 20px; border-radius: 5px; margin: 20px 0; }
-        .info { background: #f0f8ff; padding: 15px; border-radius: 5px; margin: 10px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🚀 Unified Project</h1>
-        <p>Apache web server running with poststack PostgreSQL backend</p>
+while [ $attempt -lt $max_attempts ]; do
+    # Check if we can connect to PostgreSQL and the unified.apache_auth view exists
+    if php -r "
+        try {
+            \$pdo = new PDO('pgsql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_NAME}', '${DB_USER}', '${DB_PASSWORD}');
+            \$stmt = \$pdo->query('SELECT 1 FROM unified.apache_auth LIMIT 1');
+            echo 'Database ready with unified schema!';
+            exit(0);
+        } catch (Exception \$e) {
+            exit(1);
+        }
+    " 2>/dev/null; then
+        echo "Database and unified schema are ready!"
+        break
+    fi
 
-        <div class="status">
-            <h3>✅ System Status</h3>
-            <p><strong>Server:</strong> Apache/<?= apache_get_version() ?></p>
-            <p><strong>PHP:</strong> <?= phpversion() ?></p>
-            <p><strong>Time:</strong> <?= date('Y-m-d H:i:s T') ?></p>
-        </div>
+    attempt=$((attempt + 1))
+    echo "Attempt $attempt/$max_attempts: Database not ready, waiting 2 seconds..."
+    sleep 2
+done
 
-        <div class="info">
-            <h3>🗄️ Database Configuration</h3>
-            <p><strong>Host:</strong> <?= $_ENV['UNIFIED_DB_HOST'] ?? 'localhost' ?></p>
-            <p><strong>Port:</strong> <?= $_ENV['UNIFIED_DB_PORT'] ?? '5435' ?></p>
-            <p><strong>Database:</strong> <?= $_ENV['UNIFIED_DB_NAME'] ?? 'poststack' ?></p>
-            <p><strong>Schema:</strong> <?= $_ENV['UNIFIED_DB_SCHEMA'] ?? 'unified' ?></p>
-        </div>
+if [ $attempt -eq $max_attempts ]; then
+    echo "ERROR: Database or unified schema not ready after $max_attempts attempts"
+    echo "Please ensure the database migration has been applied with: poststack db migrate"
+    exit 1
+fi
 
-        <div class="info">
-            <h3>🔗 Quick Links</h3>
-            <p><a href="/health">Health Check</a></p>
-            <p><a href="/users">User Management</a> (coming soon)</p>
-        </div>
-    </div>
-</body>
-</html>
-EOF
+# Web content is already copied by Dockerfile, no need to create index.php
 
 # Set proper permissions
 chown -R www-data:www-data /var/www/unified

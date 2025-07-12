@@ -83,7 +83,7 @@ spec:
       periodSeconds: 5
   volumes:
   - name: apache-logs
-    emptyDir: {}
+    ${VOLUME_APACHE_LOGS_TYPE}: ${VOLUME_APACHE_LOGS_CONFIG}
   - name: apache-config
-    emptyDir: {}
+    ${VOLUME_APACHE_CONFIG_TYPE}: ${VOLUME_APACHE_CONFIG_CONFIG}
   restartPolicy: Always

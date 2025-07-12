@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Area - Unified Project</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #545b62;
+        }
+        .admin-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>👑 Admin Area</h1>
+        <p>Administrative Dashboard - Database Authentication Successful</p>
+    </div>
+
+    <div class="success">
+        <strong>🎉 Authentication Successful!</strong><br>
+        You have successfully authenticated using PostgreSQL database credentials through Apache mod_authn_dbd.
+    </div>
+
+    <div class="section">
+        <h2>🔐 Authentication Details</h2>
+        <p>Your login was verified against the unified user schema in PostgreSQL:</p>
+        <ul>
+            <li><strong>Authentication Method:</strong> Apache mod_authn_dbd</li>
+            <li><strong>Database Query:</strong> <code>SELECT password FROM unified.apache_auth WHERE username = %s</code></li>
+            <li><strong>Schema:</strong> unified.apache_auth view</li>
+            <li><strong>Access Level:</strong> Admin Area (requires valid database user)</li>
+        </ul>
+    </div>
+
+    <div class="admin-info">
+        <h3>⚙️ Admin Functions</h3>
+        <p>In a real application, this area would contain administrative functions such as:</p>
+        <ul>
+            <li>User management and role assignment</li>
+            <li>System configuration</li>
+            <li>Database administration</li>
+            <li>Service monitoring and logs</li>
+            <li>Multi-service authentication management</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>📊 System Status</h2>
+        <p>Current authentication system status:</p>
+        <ul>
+            <li>✅ Apache mod_authn_dbd: Active</li>
+            <li>✅ PostgreSQL Connection: Connected</li>
+            <li>✅ Unified User Schema: Loaded</li>
+            <li>✅ Role-Based Access: Configured</li>
+            <li>✅ Multi-Service Support: Ready</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🧪 Technical Information</h2>
+        <p>This authentication demonstrates:</p>
+        <ul>
+            <li><strong>Database Integration:</strong> Apache directly queries PostgreSQL for authentication</li>
+            <li><strong>Unified Schema:</strong> Single user database serves multiple services (Apache, Dovecot, etc.)</li>
+            <li><strong>Role-Based Access:</strong> Users have different roles (admin, user, customer)</li>
+            <li><strong>Production Ready:</strong> Supports BCRYPT, SSHA, and other secure hash formats</li>
+        </ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="/" class="btn">← Back to Home</a>
+        <a href="/members/" class="btn">Visit Members Area</a>
+    </div>
+
+    <footer style="text-align: center; margin-top: 40px; padding: 20px; color: #6c757d;">
+        <p>Admin Area - Unified Project Authentication Demo</p>
+    </footer>
+</body>
+</html>

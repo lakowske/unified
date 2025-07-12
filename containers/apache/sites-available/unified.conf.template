@@ -39,6 +39,24 @@
     # Health check endpoint
     Alias /health /var/www/unified/health.php
 
+    # Protected admin area - requires database authentication
+    <Directory "/var/www/unified/admin">
+        AuthType Basic
+        AuthName "Admin Area - Database Authentication Required"
+        AuthBasicProvider dbd
+        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s"
+        Require valid-user
+    </Directory>
+
+    # Protected member area - requires database authentication
+    <Directory "/var/www/unified/members">
+        AuthType Basic
+        AuthName "Members Only - Database Authentication Required"
+        AuthBasicProvider dbd
+        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s"
+        Require valid-user
+    </Directory>
+
     # API endpoints (for future use)
     <Location "/api">
         SetEnvIf Request_URI "^/api" is_api
