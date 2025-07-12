@@ -104,20 +104,24 @@ WHERE username = %s;
 Password authentication view for Dovecot.
 
 ```sql
-SELECT user, password, scheme
+SELECT "user", password, scheme
 FROM unified.dovecot_auth
-WHERE user = '%u';
+WHERE "user" = '%u';
 ```
+
+**Note**: The `user` column is quoted to avoid conflicts with PostgreSQL's built-in `user` function.
 
 #### `unified.dovecot_users`
 
 User information view for Dovecot mailbox configuration.
 
 ```sql
-SELECT user, home, uid, gid, quota_bytes
+SELECT "user", home, uid, gid, quota_bytes
 FROM unified.dovecot_users
-WHERE user = '%u';
+WHERE "user" = '%u';
 ```
+
+**Note**: The `user` column is quoted to avoid conflicts with PostgreSQL's built-in `user` function.
 
 ## Service Integration
 
@@ -167,10 +171,10 @@ driver = pgsql
 connect = host=localhost dbname=unified_dev user=dovecot_user password=your_password
 
 # Password query
-password_query = SELECT user, password, scheme FROM unified.dovecot_auth WHERE user = '%u'
+password_query = SELECT "user", password, scheme FROM unified.dovecot_auth WHERE "user" = '%u'
 
 # User query
-user_query = SELECT home, uid, gid, CONCAT('*:bytes=', quota_bytes) as quota_rule FROM unified.dovecot_users WHERE user = '%u'
+user_query = SELECT home, uid, gid, CONCAT('*:bytes=', quota_bytes) as quota_rule FROM unified.dovecot_users WHERE "user" = '%u'
 ```
 
 #### Postfix Integration
@@ -285,7 +289,7 @@ doveadm auth test testuser@unified.local testpass
 
 # Check user creation
 psql -c "SELECT * FROM unified.apache_auth;"
-psql -c "SELECT * FROM unified.dovecot_users;"
+psql -c "SELECT \"user\", home, uid, gid FROM unified.dovecot_users;"
 ```
 
 ## Troubleshooting

@@ -146,7 +146,7 @@ CREATE VIEW unified.dovecot_auth AS
 SELECT
     u.username,
     u.domain,
-    u.email as user,
+    u.email as "user",
     up.password_hash as password,
     up.hash_scheme as scheme,
     u.is_active
@@ -162,7 +162,7 @@ CREATE VIEW unified.dovecot_users AS
 SELECT
     u.username,
     u.domain,
-    u.email as user,
+    u.email as "user",
     u.home_directory as home,
     u.system_uid as uid,
     u.system_gid as gid,
