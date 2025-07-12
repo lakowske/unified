@@ -1,5 +1,7 @@
 # Poststack Environment Configuration for Unified Project
 # This file defines multi-environment deployment settings
+environment: dev  # Currently selected environment
+
 project:
   name: unified
   description: "Unified project with Apache web server and PostgreSQL database"
