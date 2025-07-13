@@ -1,0 +1,1 @@
+# Mail container tests package

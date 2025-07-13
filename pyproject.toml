@@ -24,6 +24,7 @@ classifiers = [
 dependencies = [
     "requests",
     "poststack @ file:///home/seth/Software/dev/poststack",
+    "psycopg2-binary",
 ]
 
 [tool.setuptools.packages.find]
