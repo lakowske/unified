@@ -239,40 +239,12 @@ CREATE TRIGGER trigger_users_updated_at
     EXECUTE FUNCTION unified.update_updated_at_column();
 
 -- ================================================================
--- SAMPLE DATA FOR TESTING
+-- PRODUCTION-READY SCHEMA
 -- ================================================================
-
--- Insert sample users for testing
-INSERT INTO unified.users (username, email, first_name, last_name, email_verified) VALUES
-('admin', 'admin@unified.local', 'System', 'Administrator', true),
-('testuser', 'testuser@unified.local', 'Test', 'User', true),
-('customer1', 'customer1@unified.local', 'Customer', 'One', true);
-
--- Insert sample passwords (using PLAIN for initial testing - change in production)
-INSERT INTO unified.user_passwords (user_id, service, password_hash, hash_scheme) VALUES
--- Admin passwords
-(1, 'apache', 'admin123', 'PLAIN'),
-(1, 'dovecot', 'admin123', 'PLAIN'),
--- Test user passwords
-(2, 'apache', 'testpass', 'PLAIN'),
-(2, 'dovecot', 'testpass', 'PLAIN'),
--- Customer passwords (no email access)
-(3, 'apache', 'custpass', 'PLAIN');
-
--- Insert sample roles
-INSERT INTO unified.user_roles (user_id, role_name, service) VALUES
--- Admin access to all services
-(1, 'admin', 'apache'),
-(1, 'admin', 'dovecot'),
--- Regular user access
-(2, 'user', 'apache'),
-(2, 'user', 'dovecot'),
--- Customer access (webdav only, no email)
-(3, 'customer', 'apache'),
-(3, 'no_email', 'dovecot');
-
--- Insert sample quotas
-INSERT INTO unified.user_quotas (user_id, service, quota_type, quota_value, quota_unit) VALUES
-(1, 'dovecot', 'storage', 10737418240, 'bytes'), -- 10GB for admin
-(2, 'dovecot', 'storage', 1073741824, 'bytes'),  -- 1GB for test user
-(2, 'apache', 'bandwidth', 1000000000, 'bytes'); -- 1GB bandwidth for test user
+--
+-- No sample data is included in this migration.
+-- Users should be created via the admin API endpoints:
+-- - POST /api/v1/admin/create_user.php
+-- - Or via poststack CLI: `poststack service create-user`
+--
+-- This ensures proper password hashing and security practices.

@@ -43,7 +43,7 @@ a2ensite unified
 a2dissite 000-default
 
 # Wait for database to be ready and schema to exist
-echo "Waiting for database to be ready..."
+echo "Waiting for ${DB_HOST} database to be ready on port ${DB_PORT}..."
 max_attempts=30
 attempt=0
 
@@ -75,6 +75,22 @@ if [ $attempt -eq $max_attempts ]; then
 fi
 
 # Web content is already copied by Dockerfile, no need to create index.php
+
+# Generate API key for poststack service operations
+echo "Generating API key for service operations..."
+API_KEY=$(openssl rand -hex 32)
+API_KEY_FILE="/var/local/poststack_api_key"
+
+# Create directory if it doesn't exist
+mkdir -p /var/local
+
+# Store API key securely (readable only by www-data)
+echo "$API_KEY" > "$API_KEY_FILE"
+chown www-data:www-data "$API_KEY_FILE"
+chmod 600 "$API_KEY_FILE"
+
+echo "API key generated and stored in $API_KEY_FILE"
+echo "API key: $API_KEY"
 
 # Set proper permissions
 chown -R www-data:www-data /var/www/unified

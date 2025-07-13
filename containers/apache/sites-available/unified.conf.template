@@ -39,21 +39,21 @@
     # Health check endpoint
     Alias /health /var/www/unified/health.php
 
-    # Protected admin area - requires database authentication
+    # Protected admin area - requires admin role
     <Directory "/var/www/unified/admin">
         AuthType Basic
         AuthName "Admin Area - Database Authentication Required"
         AuthBasicProvider dbd
-        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s"
+        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s AND role = 'admin'"
         Require valid-user
     </Directory>
 
-    # Protected member area - requires database authentication
+    # Protected member area - requires user or admin role
     <Directory "/var/www/unified/members">
         AuthType Basic
         AuthName "Members Only - Database Authentication Required"
         AuthBasicProvider dbd
-        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s"
+        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s AND role IN ('user', 'admin')"
         Require valid-user
     </Directory>
 

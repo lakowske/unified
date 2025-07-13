@@ -32,7 +32,7 @@ IncludeOptional /etc/apache2/mods-enabled/*.conf
 # Database configuration for authentication
 # Note: Environment variables are substituted by entrypoint.sh
 DBDriver pgsql
-DBDParams "host=${DB_HOST} port=${DB_PORT} dbname=${DB_NAME} user=${DB_USER} password=${DB_PASSWORD}"
+DBDParams "host=${DB_HOST} port=${DB_PORT} dbname=${DB_NAME} user=${DB_USER} password=${DB_PASSWORD} options='-c search_path=unified,public'"
 DBDMin 1
 DBDKeep 2
 DBDMax 10

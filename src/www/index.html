@@ -72,6 +72,16 @@
             font-family: monospace;
             font-size: 14px;
         }
+        .credentials code {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+            border: 1px solid #dee2e6;
+            word-break: break-all;
+        }
         .status {
             padding: 10px;
             border-radius: 5px;
@@ -115,9 +125,8 @@
                 <a href="/admin/" class="btn">Access Admin Area</a>
 
                 <div class="credentials">
-                    <strong>Admin Credentials:</strong><br>
-                    Username: admin<br>
-                    Password: admin123
+                    <strong>Create Admin User:</strong><br>
+                    <code>poststack service create-user --username admin --password [secure-password] --email admin@example.com --role admin</code>
                 </div>
             </div>
 
@@ -127,9 +136,8 @@
                 <a href="/members/" class="btn btn-success">Access Members Area</a>
 
                 <div class="credentials">
-                    <strong>User Credentials:</strong><br>
-                    Username: testuser<br>
-                    Password: testpass
+                    <strong>Create Regular User:</strong><br>
+                    <code>poststack service create-user --username testuser --password [secure-password] --email user@example.com</code>
                 </div>
             </div>
         </div>
@@ -141,9 +149,9 @@
             <ul>
                 <li><strong>Authentication:</strong> Apache mod_authn_dbd with PostgreSQL</li>
                 <li><strong>Database:</strong> Unified user schema with role-based access</li>
-                <li><strong>Users:</strong> admin (admin role), testuser (user role), customer1 (customer role)</li>
-                <li><strong>Password Storage:</strong> Currently PLAIN text for demo (use BCRYPT in production)</li>
-                <li><strong>Integration:</strong> Apache authentication views query unified.apache_auth</li>
+                <li><strong>User Management:</strong> Dynamic user creation via poststack service commands</li>
+                <li><strong>Password Storage:</strong> Service-specific password hashing in normalized schema</li>
+                <li><strong>Integration:</strong> Apache authentication views query unified.apache_auth with API key secured user management</li>
             </ul>
         </div>
     </div>
@@ -152,10 +160,12 @@
         <h2>🧪 Test Scenarios</h2>
         <p>Test these authentication scenarios:</p>
         <ul>
-            <li><strong>Valid Login:</strong> Use admin/admin123 or testuser/testpass</li>
+            <li><strong>Create Users:</strong> Use <code>poststack service create-user</code> to create test accounts</li>
+            <li><strong>List Users:</strong> Use <code>poststack service list-users</code> to view created accounts</li>
+            <li><strong>Valid Login:</strong> Use credentials from users you created via poststack CLI</li>
             <li><strong>Invalid Login:</strong> Try wrong password or non-existent user</li>
             <li><strong>No Authentication:</strong> Access protected areas without credentials</li>
-            <li><strong>Role Access:</strong> Different users have same access (role-based restrictions in future)</li>
+            <li><strong>Role Access:</strong> Create both admin and regular users to test different access levels</li>
         </ul>
     </div>
 
