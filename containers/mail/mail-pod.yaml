@@ -1,0 +1,124 @@
+# Podman Pod specification for Mail server (Dovecot + Postfix)
+# This file demonstrates poststack's environment management with variable substitution
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unified-mail-${POSTSTACK_ENVIRONMENT}
+  labels:
+    app: mail
+    environment: ${POSTSTACK_ENVIRONMENT}
+    managed-by: poststack
+    project: unified
+spec:
+  initContainers:
+  - name: setup-volumes
+    image: localhost/unified/mail:latest
+    command: ['/bin/bash', '-c']
+    args:
+    - |
+      echo "Setting up mail volume permissions..."
+
+      # Create mail directory structure
+      mkdir -p /var/mail /var/log/mail /var/run/dovecot /var/spool/postfix
+
+      # Set proper ownership and permissions
+      chown -R vmail:vmail /var/mail
+      chown -R dovecot:dovecot /var/log/mail /var/run/dovecot
+      chown -R postfix:postfix /var/spool/postfix
+
+      chmod 755 /var/mail /var/log/mail
+      chmod 755 /var/run/dovecot /var/spool/postfix
+
+      echo "Mail volume setup complete"
+    volumeMounts:
+    - name: mail-data
+      mountPath: /var/mail
+    - name: mail-logs
+      mountPath: /data/logs/mail
+    - name: mail-config
+      mountPath: /etc/dovecot/conf.d
+  containers:
+  - name: mail-server
+    image: localhost/unified/mail:latest
+    ports:
+    - containerPort: 25
+      hostPort: ${MAIL_SMTP_PORT:-2526}
+      protocol: TCP
+    - containerPort: 143
+      hostPort: ${MAIL_IMAP_PORT:-1144}
+      protocol: TCP
+    env:
+    # Database connection variables (auto-generated from service discovery)
+    - name: DATABASE_URL
+      value: "${POSTGRES_URL}"
+    - name: ENVIRONMENT
+      value: "${ENVIRONMENT}"
+    - name: DB_HOST
+      value: "${POSTGRES_HOST}"
+    - name: DB_PORT
+      value: "${POSTGRES_PORT}"
+    - name: DB_NAME
+      value: "${POSTGRES_DATABASE}"
+    - name: DB_USER
+      value: "${POSTGRES_USER}"
+    - name: DB_PASSWORD
+      value: "${POSTGRES_PASSWORD}"
+    - name: DB_SSLMODE
+      value: "${DB_SSLMODE:-prefer}"
+    # User-defined environment-specific variables
+    - name: LOG_LEVEL
+      value: "${LOG_LEVEL}"
+    - name: DEBUG_MODE
+      value: "${DEBUG_MODE:-false}"
+    # Mail-specific configuration
+    - name: MAIL_DOMAIN
+      value: "${MAIL_DOMAIN:-localhost}"
+    - name: MAIL_LOG_LEVEL
+      value: "${MAIL_LOG_LEVEL:-info}"
+    - name: VMAIL_UID
+      value: "${VMAIL_UID:-5000}"
+    - name: VMAIL_GID
+      value: "${VMAIL_GID:-5000}"
+    # Application-specific configuration
+    - name: APP_NAME
+      value: "Unified Mail Server"
+    - name: APP_VERSION
+      value: "${APP_VERSION:-dev}"
+    volumeMounts:
+    - name: mail-data
+      mountPath: /var/mail
+    - name: mail-logs
+      mountPath: /data/logs/mail
+    - name: mail-config
+      mountPath: /etc/dovecot/conf.d
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    livenessProbe:
+      exec:
+        command:
+        - /usr/local/bin/mail-health-check.sh
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+    readinessProbe:
+      exec:
+        command:
+        - /bin/bash
+        - -c
+        - "nc -z localhost 25 && nc -z localhost 143"
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+  volumes:
+  - name: mail-data
+    ${VOLUME_MAIL_DATA_TYPE}: ${VOLUME_MAIL_DATA_CONFIG}
+  - name: mail-logs
+    ${VOLUME_MAIL_LOGS_TYPE}: ${VOLUME_MAIL_LOGS_CONFIG}
+  - name: mail-config
+    ${VOLUME_MAIL_CONFIG_TYPE}: ${VOLUME_MAIL_CONFIG_CONFIG}
+  restartPolicy: Always

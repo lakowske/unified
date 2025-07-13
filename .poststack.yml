@@ -27,6 +27,16 @@ environments:
           SERVER_NAME: dev.unified.local
           SERVER_ADMIN: dev@unified.local
           APACHE_LOG_LEVEL: debug
+      - name: mail
+        type: mail
+        pod: containers/mail/mail-pod.yaml
+        depends_on: [postgres]
+        variables:
+          # Mail-specific variables
+          MAIL_DOMAIN: dev.unified.local
+          MAIL_LOG_LEVEL: debug
+          MAIL_SMTP_PORT: "2526"
+          MAIL_IMAP_PORT: "1144"
     init: []  # No init containers needed for dev
     volumes:
       postgres_data:
@@ -42,13 +52,13 @@ environments:
         size: "1Gi"
       apache_config:
         type: emptyDir
-      dovecot_mail:
+      mail_data:
         type: named
-        size: "500Mi"
-      dovecot_logs:
+        size: "1Gi"
+      mail_logs:
         type: named
-        size: "100Mi"
-      dovecot_config:
+        size: "200Mi"
+      mail_config:
         type: emptyDir
     variables:
       LOG_LEVEL: debug
@@ -78,7 +88,39 @@ environments:
           SERVER_NAME: staging.unified.local
           SERVER_ADMIN: staging@unified.local
           APACHE_LOG_LEVEL: info
+      - name: mail
+        type: mail
+        pod: containers/mail/mail-pod.yaml
+        depends_on: [postgres]
+        variables:
+          # Mail-specific variables
+          MAIL_DOMAIN: staging.unified.local
+          MAIL_LOG_LEVEL: info
+          MAIL_SMTP_PORT: "2526"
+          MAIL_IMAP_PORT: "1144"
     init: []  # Could add migration containers here in the future
+    volumes:
+      postgres_data:
+        type: named
+        size: "5Gi"
+      postgres_logs:
+        type: named
+        size: "1Gi"
+      postgres_config:
+        type: emptyDir
+      apache_logs:
+        type: named
+        size: "2Gi"
+      apache_config:
+        type: emptyDir
+      mail_data:
+        type: named
+        size: "5Gi"
+      mail_logs:
+        type: named
+        size: "500Mi"
+      mail_config:
+        type: emptyDir
     variables:
       LOG_LEVEL: info
       DEBUG_MODE: "false"
@@ -109,7 +151,39 @@ environments:
           SERVER_NAME: unified.example.com
           SERVER_ADMIN: admin@unified.example.com
           APACHE_LOG_LEVEL: warn
+      - name: mail
+        type: mail
+        pod: containers/mail/mail-pod.yaml
+        depends_on: [postgres]
+        variables:
+          # Mail-specific variables
+          MAIL_DOMAIN: unified.example.com
+          MAIL_LOG_LEVEL: warn
+          MAIL_SMTP_PORT: "25"
+          MAIL_IMAP_PORT: "143"
     init: []  # Would typically have migrations and data seeding
+    volumes:
+      postgres_data:
+        type: named
+        size: "20Gi"
+      postgres_logs:
+        type: named
+        size: "5Gi"
+      postgres_config:
+        type: emptyDir
+      apache_logs:
+        type: named
+        size: "10Gi"
+      apache_config:
+        type: emptyDir
+      mail_data:
+        type: named
+        size: "50Gi"
+      mail_logs:
+        type: named
+        size: "2Gi"
+      mail_config:
+        type: emptyDir
     variables:
       LOG_LEVEL: warn
       DEBUG_MODE: "false"

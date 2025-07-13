@@ -1,0 +1,71 @@
+# Postfix main configuration for unified project
+# Virtual mail hosting with PostgreSQL backend
+
+# Basic settings
+myhostname = mail.${MAIL_DOMAIN}
+myorigin = ${MAIL_DOMAIN}
+mydestination =
+relayhost =
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+inet_protocols = ipv4
+
+# Mail queue settings
+maximal_queue_lifetime = 5d
+bounce_queue_lifetime = 2d
+maximal_backoff_time = 4000s
+minimal_backoff_time = 300s
+queue_run_delay = 300s
+
+# Virtual mail settings
+virtual_minimum_uid = ${VMAIL_UID}
+virtual_uid_maps = static:${VMAIL_UID}
+virtual_gid_maps = static:${VMAIL_GID}
+virtual_mailbox_base = /var/mail
+
+# PostgreSQL virtual domain lookup
+virtual_mailbox_domains = pgsql:/etc/postfix/sql/virtual_domains.cf
+
+# PostgreSQL virtual user lookup
+virtual_mailbox_maps = pgsql:/etc/postfix/sql/virtual_users.cf
+
+# PostgreSQL virtual alias lookup
+virtual_alias_maps = pgsql:/etc/postfix/sql/virtual_aliases.cf
+
+# Delivery settings
+virtual_transport = virtual
+virtual_mailbox_limit = 0
+
+# SMTP settings
+smtpd_banner = $myhostname ESMTP $mail_name (Unified Mail Server)
+biff = no
+append_dot_mydomain = no
+readme_directory = no
+
+# TLS settings (can be enabled later)
+smtpd_use_tls = no
+# smtpd_tls_cert_file = /etc/ssl/certs/postfix.pem
+# smtpd_tls_key_file = /etc/ssl/private/postfix.key
+# smtpd_tls_security_level = may
+
+# SMTP restrictions
+smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
+smtpd_recipient_restrictions = permit_mynetworks permit_sasl_authenticated reject_unauth_destination
+
+# SASL authentication (integrate with Dovecot)
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_local_domain = ${MAIL_DOMAIN}
+broken_sasl_auth_clients = yes
+
+# Message size limits (50MB)
+message_size_limit = 52428800
+mailbox_size_limit = 0
+
+# Logging
+maillog_file_prefixes = /var/log, /data/logs/mail
+maillog_file = /data/logs/mail/postfix.log
+# Enable debug for troubleshooting
+# debug_peer_level = 2
+# debug_peer_list = 127.0.0.1

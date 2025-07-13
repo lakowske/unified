@@ -1,0 +1,109 @@
+# Dovecot configuration for unified project
+# PostgreSQL authentication with virtual users
+
+# Basic settings
+protocols = imap
+listen = *
+base_dir = /var/run/dovecot/
+instance_name = dovecot
+
+# Authentication settings
+disable_plaintext_auth = no
+auth_mechanisms = plain login
+
+# Mail location
+mail_location = maildir:/var/mail/%d/%n
+mail_uid = ${VMAIL_UID}
+mail_gid = ${VMAIL_GID}
+first_valid_uid = ${VMAIL_UID}
+last_valid_uid = ${VMAIL_UID}
+first_valid_gid = ${VMAIL_GID}
+last_valid_gid = ${VMAIL_GID}
+
+# Mailbox locations and namespaces
+namespace inbox {
+  type = private
+  separator = /
+  prefix =
+  location =
+  inbox = yes
+  hidden = no
+  list = yes
+  subscriptions = yes
+  mailbox Drafts {
+    special_use = \Drafts
+    auto = subscribe
+  }
+  mailbox Junk {
+    special_use = \Junk
+    auto = subscribe
+  }
+  mailbox Sent {
+    special_use = \Sent
+    auto = subscribe
+  }
+  mailbox "Sent Messages" {
+    special_use = \Sent
+  }
+  mailbox Trash {
+    special_use = \Trash
+    auto = subscribe
+  }
+}
+
+# Logging
+log_path = /data/logs/mail/dovecot.log
+info_log_path = /data/logs/mail/dovecot-info.log
+debug_log_path = /data/logs/mail/dovecot-debug.log
+syslog_facility = mail
+auth_verbose = yes
+auth_debug = yes
+mail_debug = yes
+
+# SSL settings (can be enabled later)
+ssl = no
+# ssl_cert = </etc/ssl/certs/dovecot.pem
+# ssl_key = </etc/ssl/private/dovecot.pem
+
+# Service settings
+service imap-login {
+  inet_listener imap {
+    port = 143
+  }
+  inet_listener imaps {
+    port = 993
+    ssl = yes
+  }
+}
+
+service auth {
+  unix_listener /var/spool/postfix/private/auth {
+    mode = 0666
+    user = postfix
+    group = postfix
+  }
+  unix_listener auth-userdb {
+    mode = 0600
+    user = vmail
+    group = vmail
+  }
+  user = dovecot
+}
+
+service auth-worker {
+  user = vmail
+}
+
+# PostgreSQL authentication
+passdb {
+  driver = sql
+  args = /etc/dovecot/dovecot-sql.conf.ext
+}
+
+userdb {
+  driver = sql
+  args = /etc/dovecot/dovecot-sql.conf.ext
+}
+
+# PostgreSQL SQL configuration
+!include_try /etc/dovecot/conf.d/dovecot-sql.conf.ext

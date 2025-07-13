@@ -1,0 +1,34 @@
+# Dovecot SQL configuration for PostgreSQL authentication
+# This file is processed by envsubst in entrypoint.sh
+
+driver = pgsql
+connect = host=${DB_HOST} port=${DB_PORT} dbname=${DB_NAME} user=${DB_USER} password=${DB_PASSWORD} sslmode=${DB_SSLMODE}
+
+# Default password scheme
+default_pass_scheme = PLAIN
+
+# Password query for authentication
+# Uses the unified.dovecot_auth view created in migration
+password_query = \
+  SELECT username, domain, password, 'Y' as nopassword, 'Y' as nodelay \
+  FROM unified.dovecot_auth \
+  WHERE "user" = '%u' AND domain = '%d' AND is_active = true
+
+# User query for mailbox location and system user info
+# Uses the unified.dovecot_users view created in migration
+user_query = \
+  SELECT \
+    home, \
+    uid, \
+    gid, \
+    'maildir:' || home as mail \
+  FROM unified.dovecot_users \
+  WHERE "user" = '%u' AND domain = '%d'
+
+# Iterate query for listing all users (used by doveadm)
+iterate_query = \
+  SELECT username as user, domain \
+  FROM unified.dovecot_users
+
+# Enable connection pooling
+# auth_pool_size = 5
