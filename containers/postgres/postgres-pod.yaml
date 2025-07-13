@@ -54,8 +54,8 @@ spec:
     volumeMounts:
     - name: postgres-data
       mountPath: /data/postgres/data
-    - name: postgres-logs
-      mountPath: /data/postgres/logs
+    - name: unified-logs
+      mountPath: /data/logs
     - name: postgres-config
       mountPath: /data/postgres/config
 
@@ -92,8 +92,8 @@ spec:
   volumes:
   - name: postgres-data
     ${VOLUME_POSTGRES_DATA_TYPE}: ${VOLUME_POSTGRES_DATA_CONFIG}
-  - name: postgres-logs
-    ${VOLUME_POSTGRES_LOGS_TYPE}: ${VOLUME_POSTGRES_LOGS_CONFIG}
+  - name: unified-logs
+    ${VOLUME_UNIFIED_LOGS_TYPE}: ${VOLUME_UNIFIED_LOGS_CONFIG}
   - name: postgres-config
     ${VOLUME_POSTGRES_CONFIG_TYPE}: ${VOLUME_POSTGRES_CONFIG_CONFIG}
 

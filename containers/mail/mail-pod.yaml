@@ -19,22 +19,22 @@ spec:
       echo "Setting up mail volume permissions..."
 
       # Create mail directory structure
-      mkdir -p /var/mail /var/log/mail /var/run/dovecot /var/spool/postfix
+      mkdir -p /var/mail /data/logs/mail /var/run/dovecot /var/spool/postfix
 
       # Set proper ownership and permissions
       chown -R vmail:vmail /var/mail
-      chown -R dovecot:dovecot /var/log/mail /var/run/dovecot
+      chown -R vmail:certgroup /data/logs/mail /var/run/dovecot
       chown -R postfix:postfix /var/spool/postfix
 
-      chmod 755 /var/mail /var/log/mail
+      chmod 755 /var/mail /data/logs/mail
       chmod 755 /var/run/dovecot /var/spool/postfix
 
       echo "Mail volume setup complete"
     volumeMounts:
     - name: mail-data
       mountPath: /var/mail
-    - name: mail-logs
-      mountPath: /data/logs/mail
+    - name: unified-logs
+      mountPath: /data/logs
     - name: mail-config
       mountPath: /etc/dovecot/conf.d
   containers:
@@ -87,8 +87,8 @@ spec:
     volumeMounts:
     - name: mail-data
       mountPath: /var/mail
-    - name: mail-logs
-      mountPath: /data/logs/mail
+    - name: unified-logs
+      mountPath: /data/logs
     - name: mail-config
       mountPath: /etc/dovecot/conf.d
     resources:
@@ -117,8 +117,8 @@ spec:
   volumes:
   - name: mail-data
     ${VOLUME_MAIL_DATA_TYPE}: ${VOLUME_MAIL_DATA_CONFIG}
-  - name: mail-logs
-    ${VOLUME_MAIL_LOGS_TYPE}: ${VOLUME_MAIL_LOGS_CONFIG}
+  - name: unified-logs
+    ${VOLUME_UNIFIED_LOGS_TYPE}: ${VOLUME_UNIFIED_LOGS_CONFIG}
   - name: mail-config
     ${VOLUME_MAIL_CONFIG_TYPE}: ${VOLUME_MAIL_CONFIG_CONFIG}
   restartPolicy: Always

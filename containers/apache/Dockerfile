@@ -19,6 +19,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Enable Apache modules
 RUN a2enmod rewrite ssl headers deflate expires dbd authn_dbd
 
+# Create centralized logging directory structure using existing certgroup
+RUN mkdir -p /data/logs/apache /data/logs/container-runtime && \
+    chown root:certgroup /data/logs && \
+    chmod 2755 /data/logs && \
+    chown www-data:certgroup /data/logs/apache && \
+    chmod 755 /data/logs/apache
+
+# Add www-data user to certgroup for certificate access and logging
+RUN usermod -a -G certgroup www-data
+
 # Create application directory
 RUN mkdir -p /var/www/unified
 

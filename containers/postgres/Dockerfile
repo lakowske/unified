@@ -25,7 +25,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Add postgres user to certgroup for certificate access
+# Create centralized logging directory structure using existing certgroup
+RUN mkdir -p /data/logs/postgres /data/logs/container-runtime && \
+    chown root:certgroup /data/logs && \
+    chmod 2755 /data/logs && \
+    chown postgres:certgroup /data/logs/postgres && \
+    chmod 755 /data/logs/postgres
+
+# Add postgres user to certgroup for certificate access and logging
 RUN usermod -a -G certgroup postgres
 
 # Create PostgreSQL data directory with proper ownership

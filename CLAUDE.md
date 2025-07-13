@@ -178,3 +178,19 @@ pre-commit install
 ```
 
 Now you can start coding with all quality checks automated!
+
+## Unified Project Development Practices
+
+### Container Management
+
+- **Always use poststack for building containers**: Use `poststack build [service...]` instead of direct `podman build` commands
+  - `poststack build` - builds all containers (base, postgres, and all project containers)
+  - `poststack build postgres` - builds only the postgres container (and base image dependency)
+  - `poststack build apache mail` - builds only apache and mail containers (and base image dependency)
+- **Always use poststack for environment management**: Use `poststack env [start|stop|restart|status]` instead of direct `podman` commands
+  - `poststack env start dev` - starts the dev environment
+  - `poststack env stop dev --rm` - stops dev environment and removes containers
+  - `poststack env restart dev` - performs clean restart (stop with removal, then start)
+  - Only use direct `podman` commands as a last resort when poststack commands are not available
+- **Dockerfile paths**: When building from project root context, use full paths like `containers/service/file.ext` in COPY commands
+- **Build context**: Containers should be built from the unified project root directory, not from individual container directories

@@ -10,9 +10,15 @@ environments:
   # Development environment - for local development
   dev:
     deployments:
+      - name: volume-setup
+        type: init
+        pod: containers/volume-setup/volume-setup-pod.yaml
+        variables:
+          INIT_TYPE: volume-setup
       - name: postgres
         type: postgres
         pod: containers/postgres/postgres-pod.yaml
+        depends_on: [volume-setup]
         variables:
           DB_NAME: unified_dev
           DB_PORT: "5436"
@@ -21,7 +27,7 @@ environments:
       - name: apache
         type: web
         pod: containers/apache/apache-pod.yaml
-        depends_on: [postgres]
+        depends_on: [postgres, volume-setup]
         variables:
           # Apache-specific variables
           SERVER_NAME: dev.unified.local
@@ -30,36 +36,27 @@ environments:
       - name: mail
         type: mail
         pod: containers/mail/mail-pod.yaml
-        depends_on: [postgres]
+        depends_on: [postgres, volume-setup]
         variables:
           # Mail-specific variables
           MAIL_DOMAIN: dev.unified.local
           MAIL_LOG_LEVEL: debug
           MAIL_SMTP_PORT: "2526"
           MAIL_IMAP_PORT: "1144"
-    init: []  # No init containers needed for dev
+    init: []
     volumes:
       postgres_data:
         type: named
-        size: "2Gi"
-      postgres_logs:
-        type: named
-        size: "500Mi"
       postgres_config:
         type: emptyDir
-      apache_logs:
-        type: named
-        size: "1Gi"
       apache_config:
         type: emptyDir
       mail_data:
         type: named
-        size: "1Gi"
-      mail_logs:
-        type: named
-        size: "200Mi"
       mail_config:
         type: emptyDir
+      unified_logs:
+        type: named
     variables:
       LOG_LEVEL: debug
       DEBUG_MODE: "true"
@@ -72,9 +69,15 @@ environments:
   # Staging environment - for testing before production
   staging:
     deployments:
+      - name: volume-setup
+        type: init
+        pod: containers/volume-setup/volume-setup-pod.yaml
+        variables:
+          INIT_TYPE: volume-setup
       - name: postgres
         type: postgres
         pod: containers/postgres/postgres-pod.yaml
+        depends_on: [volume-setup]
         variables:
           DB_NAME: unified_staging
           DB_PORT: "5434"
@@ -83,7 +86,7 @@ environments:
       - name: apache
         type: web
         pod: containers/apache/apache-pod.yaml
-        depends_on: [postgres]
+        depends_on: [postgres, volume-setup]
         variables:
           SERVER_NAME: staging.unified.local
           SERVER_ADMIN: staging@unified.local
@@ -91,36 +94,27 @@ environments:
       - name: mail
         type: mail
         pod: containers/mail/mail-pod.yaml
-        depends_on: [postgres]
+        depends_on: [postgres, volume-setup]
         variables:
           # Mail-specific variables
           MAIL_DOMAIN: staging.unified.local
           MAIL_LOG_LEVEL: info
           MAIL_SMTP_PORT: "2526"
           MAIL_IMAP_PORT: "1144"
-    init: []  # Could add migration containers here in the future
+    init: []
     volumes:
       postgres_data:
         type: named
-        size: "5Gi"
-      postgres_logs:
-        type: named
-        size: "1Gi"
       postgres_config:
         type: emptyDir
-      apache_logs:
-        type: named
-        size: "2Gi"
       apache_config:
         type: emptyDir
       mail_data:
         type: named
-        size: "5Gi"
-      mail_logs:
-        type: named
-        size: "500Mi"
       mail_config:
         type: emptyDir
+      unified_logs:
+        type: named
     variables:
       LOG_LEVEL: info
       DEBUG_MODE: "false"
@@ -135,9 +129,15 @@ environments:
   # Production environment - for live deployment
   production:
     deployments:
+      - name: volume-setup
+        type: init
+        pod: containers/volume-setup/volume-setup-pod.yaml
+        variables:
+          INIT_TYPE: volume-setup
       - name: postgres
         type: postgres
         pod: containers/postgres/postgres-pod.yaml
+        depends_on: [volume-setup]
         variables:
           DB_NAME: unified_prod
           DB_PORT: "5435"
@@ -146,7 +146,7 @@ environments:
       - name: apache
         type: web
         pod: containers/apache/apache-pod.yaml
-        depends_on: [postgres]
+        depends_on: [postgres, volume-setup]
         variables:
           SERVER_NAME: unified.example.com
           SERVER_ADMIN: admin@unified.example.com
@@ -154,36 +154,27 @@ environments:
       - name: mail
         type: mail
         pod: containers/mail/mail-pod.yaml
-        depends_on: [postgres]
+        depends_on: [postgres, volume-setup]
         variables:
           # Mail-specific variables
           MAIL_DOMAIN: unified.example.com
           MAIL_LOG_LEVEL: warn
           MAIL_SMTP_PORT: "25"
           MAIL_IMAP_PORT: "143"
-    init: []  # Would typically have migrations and data seeding
+    init: []
     volumes:
       postgres_data:
         type: named
-        size: "20Gi"
-      postgres_logs:
-        type: named
-        size: "5Gi"
       postgres_config:
         type: emptyDir
-      apache_logs:
-        type: named
-        size: "10Gi"
       apache_config:
         type: emptyDir
       mail_data:
         type: named
-        size: "50Gi"
-      mail_logs:
-        type: named
-        size: "2Gi"
       mail_config:
         type: emptyDir
+      unified_logs:
+        type: named
     variables:
       LOG_LEVEL: warn
       DEBUG_MODE: "false"

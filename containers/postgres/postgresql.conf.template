@@ -10,12 +10,22 @@ max_connections = $POSTGRES_MAX_CONNECTIONS
 shared_buffers = $POSTGRES_SHARED_BUFFERS
 effective_cache_size = $POSTGRES_EFFECTIVE_CACHE_SIZE
 
-# Logging
-log_destination = 'stderr'
-logging_collector = off
+# Logging - Centralized logging for fail2ban compatibility
+log_destination = 'stderr,csvlog'
+logging_collector = on
+log_directory = '/data/logs/postgres'
+log_filename = 'postgresql-%Y-%m-%d.log'
+log_file_mode = 0644
+log_truncate_on_rotation = off
+log_rotation_age = 1d
+log_rotation_size = 100MB
 log_min_duration_statement = $POSTGRES_LOG_MIN_DURATION
-log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+log_line_prefix = '%t [%p] [%l] [%u@%d] [%r] '
 log_statement = 'none'
+# Additional logging for fail2ban
+log_connections = on
+log_disconnections = on
+log_lock_waits = on
 
 # SSL settings (will be configured if certificates are available)
 ssl = $POSTGRES_SSL_MODE

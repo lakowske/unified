@@ -7,9 +7,10 @@
     DocumentRoot /var/www/unified
     DirectoryIndex index.php index.html
 
-    # Logging
+    # Logging - Fail2ban compatible format
     ErrorLog ${APACHE_LOG_DIR}/unified_error.log
-    CustomLog ${APACHE_LOG_DIR}/unified_access.log combined
+    CustomLog ${APACHE_LOG_DIR}/unified_access.log fail2ban_combined
+    CustomLog ${APACHE_LOG_DIR}/unified_auth.log fail2ban_auth expr=%{REQUEST_STATUS}==401
 
     # PHP Configuration
     <FilesMatch \.php$>

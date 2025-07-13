@@ -17,15 +17,15 @@ spec:
     args:
     - |
       echo "Setting up Apache volume permissions..."
-      mkdir -p /var/log/apache2 /etc/apache2/conf.d
-      chown -R www-data:www-data /var/log/apache2
-      chmod 755 /var/log/apache2
+      mkdir -p /data/logs/apache /etc/apache2/conf.d
+      chown -R www-data:certgroup /data/logs/apache
+      chmod 755 /data/logs/apache
       chown -R www-data:www-data /etc/apache2/conf.d
       chmod 755 /etc/apache2/conf.d
       echo "Volume setup complete"
     volumeMounts:
-    - name: apache-logs
-      mountPath: /var/log/apache2
+    - name: unified-logs
+      mountPath: /data/logs
     - name: apache-config
       mountPath: /etc/apache2/conf.d
   containers:
@@ -76,8 +76,8 @@ spec:
     - name: APP_VERSION
       value: "${APP_VERSION:-dev}"
     volumeMounts:
-    - name: apache-logs
-      mountPath: /var/log/apache2
+    - name: unified-logs
+      mountPath: /data/logs
     - name: apache-config
       mountPath: /etc/apache2/conf.d
     resources:
@@ -100,8 +100,8 @@ spec:
       initialDelaySeconds: 5
       periodSeconds: 5
   volumes:
-  - name: apache-logs
-    ${VOLUME_APACHE_LOGS_TYPE}: ${VOLUME_APACHE_LOGS_CONFIG}
+  - name: unified-logs
+    ${VOLUME_UNIFIED_LOGS_TYPE}: ${VOLUME_UNIFIED_LOGS_CONFIG}
   - name: apache-config
     ${VOLUME_APACHE_CONFIG_TYPE}: ${VOLUME_APACHE_CONFIG_CONFIG}
   restartPolicy: Always

@@ -1,0 +1,50 @@
+# Volume Setup Init Container
+# This container runs before main services to initialize shared volumes
+# with proper permissions and directory structure
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unified-volume-setup-${ENVIRONMENT}
+  labels:
+    app: volume-setup
+    environment: ${ENVIRONMENT}
+    managed-by: poststack
+    project: unified
+    component: init
+spec:
+  containers:
+  - name: volume-setup
+    image: localhost/unified/volume-setup:latest
+    securityContext:
+      runAsUser: 0
+      runAsGroup: 0
+    env:
+    - name: ENVIRONMENT
+      value: "${ENVIRONMENT}"
+    volumeMounts:
+    - name: unified-logs
+      mountPath: /data/logs
+    # Add other volumes that need initialization here
+    # - name: certificates
+    #   mountPath: /data/certificates
+
+  volumes:
+  - name: unified-logs
+    ${VOLUME_UNIFIED_LOGS_TYPE}: ${VOLUME_UNIFIED_LOGS_CONFIG}
+  # Add other volumes here as needed
+  # - name: certificates
+  #   persistentVolumeClaim: {"claimName": "unified-certificates-${ENVIRONMENT}"}
+
+  restartPolicy: Never
+
+# Pod restart policy notes:
+# - Never: Pod will not restart after completion (good for init containers)
+# - OnFailure: Pod will restart only if container exits with non-zero status
+# - Always: Pod will always restart (not suitable for init containers)
+
+# This init container:
+# 1. Creates proper directory structure in volumes
+# 2. Sets correct ownership and permissions
+# 3. Is idempotent (can be run multiple times safely)
+# 4. Can be extended for other initialization tasks

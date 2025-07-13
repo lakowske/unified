@@ -32,6 +32,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -g 5000 vmail && \
     useradd -g vmail -u 5000 -d /var/mail -s /usr/sbin/nologin vmail
 
+# Create centralized logging directory structure using existing certgroup
+RUN mkdir -p /data/logs/mail /data/logs/container-runtime && \
+    chown root:certgroup /data/logs && \
+    chmod 2755 /data/logs && \
+    chown vmail:certgroup /data/logs/mail && \
+    chmod 755 /data/logs/mail
+
 # Create mail directories
 RUN mkdir -p /var/mail /var/log/mail /etc/dovecot/conf.d /etc/postfix/sql && \
     chown -R vmail:vmail /var/mail && \
@@ -39,21 +46,23 @@ RUN mkdir -p /var/mail /var/log/mail /etc/dovecot/conf.d /etc/postfix/sql && \
     chown -R dovecot:dovecot /var/log/mail && \
     chmod 755 /var/log/mail
 
-# Add vmail user to certgroup for certificate access
-RUN usermod -a -G certgroup vmail
+# Add mail users to certgroup for certificate access and logging
+RUN usermod -a -G certgroup vmail && \
+    usermod -a -G certgroup dovecot && \
+    usermod -a -G certgroup postfix
 
 # Copy configuration templates
-COPY dovecot.conf.template /etc/dovecot/dovecot.conf.template
-COPY dovecot-sql.conf.template /etc/dovecot/dovecot-sql.conf.template
-COPY postfix/main.cf.template /etc/postfix/main.cf.template
-COPY postfix/master.cf.template /etc/postfix/master.cf.template
+COPY containers/mail/dovecot.conf.template /etc/dovecot/dovecot.conf.template
+COPY containers/mail/dovecot-sql.conf.template /etc/dovecot/dovecot-sql.conf.template
+COPY containers/mail/postfix/main.cf.template /etc/postfix/main.cf.template
+COPY containers/mail/postfix/master.cf.template /etc/postfix/master.cf.template
 
 # Copy management scripts
-COPY scripts/ /usr/local/bin/mail-scripts/
+COPY containers/mail/scripts/ /usr/local/bin/mail-scripts/
 RUN chmod +x /usr/local/bin/mail-scripts/*.sh
 
 # Copy entrypoint script
-COPY entrypoint.sh /entrypoint.sh
+COPY containers/mail/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Install Python packages for mail management

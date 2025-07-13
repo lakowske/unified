@@ -19,6 +19,11 @@ HostnameLookups Off
 # Error and Access logs
 ErrorLog ${APACHE_LOG_DIR}/error.log
 LogLevel warn
+
+# Standardized log formats for fail2ban compatibility
+# Standard combined format with enhanced authentication tracking
+LogFormat "%{%Y-%m-%d %H:%M:%S}t [APACHE] [ACCESS] %h %l %u \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" fail2ban_combined
+LogFormat "%{%Y-%m-%d %H:%M:%S}t [APACHE] [AUTH] %h %l %u \"%r\" %>s" fail2ban_auth
 LogFormat "%v:%p %h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" vhost_combined
 LogFormat "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" combined
 LogFormat "%h %l %u %t \"%r\" %>s %O" common
