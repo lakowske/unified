@@ -5,10 +5,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: unified-volume-setup-${ENVIRONMENT}
+  name: unified-volume-setup-{{ ENVIRONMENT }}
   labels:
     app: volume-setup
-    environment: ${ENVIRONMENT}
+    environment: {{ ENVIRONMENT }}
     managed-by: poststack
     project: unified
     component: init
@@ -21,7 +21,7 @@ spec:
       runAsGroup: 0
     env:
     - name: ENVIRONMENT
-      value: "${ENVIRONMENT}"
+      value: "{{ ENVIRONMENT }}"
     volumeMounts:
     - name: unified-logs
       mountPath: /data/logs
@@ -31,10 +31,10 @@ spec:
 
   volumes:
   - name: unified-logs
-    ${VOLUME_UNIFIED_LOGS_TYPE}: ${VOLUME_UNIFIED_LOGS_CONFIG}
+    {{ VOLUME_UNIFIED_LOGS_TYPE }}: {{ VOLUME_UNIFIED_LOGS_CONFIG }}
   # Add other volumes here as needed
   # - name: certificates
-  #   persistentVolumeClaim: {"claimName": "unified-certificates-${ENVIRONMENT}"}
+  #   persistentVolumeClaim: {"claimName": "unified-certificates-{{ ENVIRONMENT }}"}
 
   restartPolicy: Never
 

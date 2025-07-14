@@ -7,10 +7,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: unified-postgres-${ENVIRONMENT}
+  name: unified-postgres-{{ ENVIRONMENT }}
   labels:
     app: postgres
-    environment: ${ENVIRONMENT}
+    environment: {{ ENVIRONMENT }}
     managed-by: poststack
     project: unified
     component: database
@@ -20,16 +20,16 @@ spec:
     image: localhost/poststack/postgres:latest
     ports:
     - containerPort: 5432
-      hostPort: ${DB_PORT}
+      hostPort: {{ DB_PORT }}
       protocol: TCP
     env:
     # Database configuration
     - name: POSTGRES_DB
-      value: "${DB_NAME}"
+      value: "{{ DB_NAME }}"
     - name: POSTGRES_USER
-      value: "${DB_USER}"
+      value: "{{ DB_USER }}"
     - name: POSTGRES_PASSWORD
-      value: "${DB_PASSWORD}"
+      value: "{{ DB_PASSWORD }}"
     - name: POSTGRES_HOST_AUTH_METHOD
       value: "trust"
 
@@ -41,7 +41,7 @@ spec:
 
     # Environment info
     - name: ENVIRONMENT
-      value: "${ENVIRONMENT}"
+      value: "{{ ENVIRONMENT }}"
     - name: CONFIG_DIR
       value: "/data/config"
     - name: CERT_PATH
@@ -91,18 +91,18 @@ spec:
 
   volumes:
   - name: postgres-data
-    ${VOLUME_POSTGRES_DATA_TYPE}: ${VOLUME_POSTGRES_DATA_CONFIG}
+    {{ VOLUME_POSTGRES_DATA_TYPE }}: {{ VOLUME_POSTGRES_DATA_CONFIG }}
   - name: unified-logs
-    ${VOLUME_UNIFIED_LOGS_TYPE}: ${VOLUME_UNIFIED_LOGS_CONFIG}
+    {{ VOLUME_UNIFIED_LOGS_TYPE }}: {{ VOLUME_UNIFIED_LOGS_CONFIG }}
   - name: postgres-config
-    ${VOLUME_POSTGRES_CONFIG_TYPE}: ${VOLUME_POSTGRES_CONFIG_CONFIG}
+    {{ VOLUME_POSTGRES_CONFIG_TYPE }}: {{ VOLUME_POSTGRES_CONFIG_CONFIG }}
 
   restartPolicy: Always
 
 # Configuration Notes:
 #
 # 1. Environment Variables:
-#    Variables like ${DB_NAME} are substituted by poststack
+#    Variables like {{ DB_NAME }} are substituted by poststack
 #    at deployment time based on your .poststack.yml configuration.
 #
 # 2. Volumes:

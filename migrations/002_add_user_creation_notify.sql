@@ -21,7 +21,7 @@ BEGIN
             'created_at', NEW.created_at
         )::text
     );
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -61,7 +61,7 @@ BEGIN
             )::text
         );
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -91,7 +91,7 @@ BEGIN
             'deleted_at', now()
         )::text
     );
-    
+
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;

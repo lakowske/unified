@@ -1,15 +1,18 @@
 # Podman Pod specification for Apache web server
-# This file demonstrates poststack's environment management with variable substitution
+# This file demonstrates poststack's environment management with Jinja2 template processing
 apiVersion: v1
 kind: Pod
 metadata:
-  name: unified-apache-${POSTSTACK_ENVIRONMENT}
+  name: unified-apache-{{ POSTSTACK_ENVIRONMENT }}
   labels:
     app: apache
-    environment: ${POSTSTACK_ENVIRONMENT}
+    environment: {{ POSTSTACK_ENVIRONMENT }}
     managed-by: poststack
     project: unified
 spec:
+{% if APACHE_USE_HOST_NETWORK == "true" %}
+  hostNetwork: true
+{% endif %}
   initContainers:
   - name: setup-volumes
     image: localhost/unified/apache:latest
@@ -31,50 +34,52 @@ spec:
   containers:
   - name: apache-web
     image: localhost/unified/apache:latest
+{% if APACHE_USE_HOST_NETWORK != "true" %}
     ports:
     - containerPort: 80
-      hostPort: ${APACHE_HOST_PORT:-8080}
+      hostPort: {{ APACHE_HOST_PORT | default('8080') }}
       protocol: TCP
     - containerPort: 443
-      hostPort: ${APACHE_HTTPS_PORT:-8443}
+      hostPort: {{ APACHE_HTTPS_PORT | default('8443') }}
       protocol: TCP
+{% endif %}
     env:
     # Database connection variables (auto-generated from service discovery)
     - name: DATABASE_URL
-      value: "${POSTGRES_URL}"
+      value: "{{ POSTGRES_URL }}"
     - name: ENVIRONMENT
-      value: "${ENVIRONMENT}"
+      value: "{{ ENVIRONMENT }}"
     - name: DB_HOST
-      value: "${POSTGRES_HOST}"
+      value: "{{ POSTGRES_HOST }}"
     - name: DB_PORT
-      value: "${POSTGRES_PORT}"
+      value: "{{ POSTGRES_PORT }}"
     - name: DB_NAME
-      value: "${POSTGRES_DATABASE}"
+      value: "{{ POSTGRES_DATABASE }}"
     - name: DB_USER
-      value: "${POSTGRES_USER}"
+      value: "{{ POSTGRES_USER }}"
     - name: DB_PASSWORD
-      value: "${POSTGRES_PASSWORD}"
+      value: "{{ POSTGRES_PASSWORD }}"
     # User-defined environment-specific variables
     - name: LOG_LEVEL
-      value: "${LOG_LEVEL}"
+      value: "{{ LOG_LEVEL }}"
     - name: DEBUG_MODE
-      value: "${DEBUG_MODE:-false}"
+      value: "{{ DEBUG_MODE | default('false') }}"
     - name: CACHE_TTL
-      value: "${CACHE_TTL:-300}"
+      value: "{{ CACHE_TTL | default('300') }}"
     # Apache-specific configuration
     - name: APACHE_SERVER_NAME
-      value: "${SERVER_NAME:-localhost}"
+      value: "{{ SERVER_NAME | default('localhost') }}"
     - name: APACHE_SERVER_ADMIN
-      value: "${SERVER_ADMIN:-admin@localhost}"
+      value: "{{ SERVER_ADMIN | default('admin@localhost') }}"
     - name: APACHE_DOCUMENT_ROOT
       value: "/var/www/unified"
     - name: APACHE_LOG_LEVEL
-      value: "${APACHE_LOG_LEVEL:-warn}"
+      value: "{{ APACHE_LOG_LEVEL | default('warn') }}"
     # Application-specific configuration
     - name: APP_NAME
       value: "Unified Project"
     - name: APP_VERSION
-      value: "${APP_VERSION:-dev}"
+      value: "{{ APP_VERSION | default('dev') }}"
     volumeMounts:
     - name: unified-logs
       mountPath: /data/logs
@@ -101,7 +106,7 @@ spec:
       periodSeconds: 5
   volumes:
   - name: unified-logs
-    ${VOLUME_UNIFIED_LOGS_TYPE}: ${VOLUME_UNIFIED_LOGS_CONFIG}
+    {{ VOLUME_UNIFIED_LOGS_TYPE }}: {{ VOLUME_UNIFIED_LOGS_CONFIG }}
   - name: apache-config
-    ${VOLUME_APACHE_CONFIG_TYPE}: ${VOLUME_APACHE_CONFIG_CONFIG}
+    {{ VOLUME_APACHE_CONFIG_TYPE }}: {{ VOLUME_APACHE_CONFIG_CONFIG }}
   restartPolicy: Always

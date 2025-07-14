@@ -1,15 +1,18 @@
 # Podman Pod specification for Mail server (Dovecot + Postfix)
-# This file demonstrates poststack's environment management with variable substitution
+# This file demonstrates poststack's environment management with Jinja2 template processing
 apiVersion: v1
 kind: Pod
 metadata:
-  name: unified-mail-${POSTSTACK_ENVIRONMENT}
+  name: unified-mail-{{ POSTSTACK_ENVIRONMENT }}
   labels:
     app: mail
-    environment: ${POSTSTACK_ENVIRONMENT}
+    environment: {{ POSTSTACK_ENVIRONMENT }}
     managed-by: poststack
     project: unified
 spec:
+{% if MAIL_USE_HOST_NETWORK == "true" %}
+  hostNetwork: true
+{% endif %}
   initContainers:
   - name: setup-volumes
     image: localhost/unified/mail:latest
@@ -40,50 +43,52 @@ spec:
   containers:
   - name: mail-server
     image: localhost/unified/mail:latest
+{% if MAIL_USE_HOST_NETWORK != "true" %}
     ports:
     - containerPort: 25
-      hostPort: ${MAIL_SMTP_PORT:-2525}
+      hostPort: {{ MAIL_SMTP_PORT | default('2525') }}
       protocol: TCP
     - containerPort: 143
-      hostPort: ${MAIL_IMAP_PORT:-1144}
+      hostPort: {{ MAIL_IMAP_PORT | default('1144') }}
       protocol: TCP
+{% endif %}
     env:
     # Database connection variables (auto-generated from service discovery)
     - name: DATABASE_URL
-      value: "${POSTGRES_URL}"
+      value: "{{ POSTGRES_URL }}"
     - name: ENVIRONMENT
-      value: "${ENVIRONMENT}"
+      value: "{{ ENVIRONMENT }}"
     - name: DB_HOST
-      value: "${POSTGRES_HOST}"
+      value: "{{ POSTGRES_HOST }}"
     - name: DB_PORT
-      value: "${POSTGRES_PORT}"
+      value: "{{ POSTGRES_PORT }}"
     - name: DB_NAME
-      value: "${POSTGRES_DATABASE}"
+      value: "{{ POSTGRES_DATABASE }}"
     - name: DB_USER
-      value: "${POSTGRES_USER}"
+      value: "{{ POSTGRES_USER }}"
     - name: DB_PASSWORD
-      value: "${POSTGRES_PASSWORD}"
+      value: "{{ POSTGRES_PASSWORD }}"
     - name: DB_SSLMODE
-      value: "${DB_SSLMODE:-prefer}"
+      value: "{{ DB_SSLMODE | default('prefer') }}"
     # User-defined environment-specific variables
     - name: LOG_LEVEL
-      value: "${LOG_LEVEL}"
+      value: "{{ LOG_LEVEL }}"
     - name: DEBUG_MODE
-      value: "${DEBUG_MODE:-false}"
+      value: "{{ DEBUG_MODE | default('false') }}"
     # Mail-specific configuration
     - name: MAIL_DOMAIN
-      value: "${MAIL_DOMAIN:-localhost}"
+      value: "{{ MAIL_DOMAIN | default('localhost') }}"
     - name: MAIL_LOG_LEVEL
-      value: "${MAIL_LOG_LEVEL:-info}"
+      value: "{{ MAIL_LOG_LEVEL | default('info') }}"
     - name: VMAIL_UID
-      value: "${VMAIL_UID:-5000}"
+      value: "{{ VMAIL_UID | default('5000') }}"
     - name: VMAIL_GID
-      value: "${VMAIL_GID:-5000}"
+      value: "{{ VMAIL_GID | default('5000') }}"
     # Application-specific configuration
     - name: APP_NAME
       value: "Unified Mail Server"
     - name: APP_VERSION
-      value: "${APP_VERSION:-dev}"
+      value: "{{ APP_VERSION | default('dev') }}"
     volumeMounts:
     - name: mail-data
       mountPath: /var/mail
@@ -116,9 +121,9 @@ spec:
       timeoutSeconds: 5
   volumes:
   - name: mail-data
-    ${VOLUME_MAIL_DATA_TYPE}: ${VOLUME_MAIL_DATA_CONFIG}
+    {{ VOLUME_MAIL_DATA_TYPE }}: {{ VOLUME_MAIL_DATA_CONFIG }}
   - name: unified-logs
-    ${VOLUME_UNIFIED_LOGS_TYPE}: ${VOLUME_UNIFIED_LOGS_CONFIG}
+    {{ VOLUME_UNIFIED_LOGS_TYPE }}: {{ VOLUME_UNIFIED_LOGS_CONFIG }}
   - name: mail-config
-    ${VOLUME_MAIL_CONFIG_TYPE}: ${VOLUME_MAIL_CONFIG_CONFIG}
+    {{ VOLUME_MAIL_CONFIG_TYPE }}: {{ VOLUME_MAIL_CONFIG_CONFIG }}
   restartPolicy: Always

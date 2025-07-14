@@ -12,12 +12,12 @@ environments:
     deployments:
       - name: volume-setup
         type: init
-        pod: containers/volume-setup/volume-setup-pod.yaml
+        pod: containers/volume-setup/volume-setup-pod.yaml.j2
         variables:
           INIT_TYPE: volume-setup
       - name: postgres
         type: postgres
-        pod: containers/postgres/postgres-pod.yaml
+        pod: containers/postgres/postgres-pod.yaml.j2
         depends_on: [volume-setup]
         variables:
           DB_NAME: unified_dev
@@ -26,7 +26,7 @@ environments:
           DB_PASSWORD: "dev_password123"
       - name: apache
         type: web
-        pod: containers/apache/apache-pod.yaml
+        pod: containers/apache/apache-pod.yaml.j2
         depends_on: [postgres, volume-setup]
         variables:
           # Apache-specific variables
@@ -35,7 +35,7 @@ environments:
           APACHE_LOG_LEVEL: debug
       - name: mail
         type: mail
-        pod: containers/mail/mail-pod.yaml
+        pod: containers/mail/mail-pod.yaml.j2
         depends_on: [postgres, volume-setup]
         variables:
           # Mail-specific variables
@@ -65,18 +65,22 @@ environments:
       APACHE_HTTPS_PORT: "8443"
       APP_VERSION: "dev-latest"
       POSTSTACK_ENVIRONMENT: dev
+      # Network mode configuration (host for dev environment)
+      NETWORK_MODE: "host"
+      MAIL_USE_HOST_NETWORK: "true"
+      APACHE_USE_HOST_NETWORK: "true"
 
   # Staging environment - for testing before production
   staging:
     deployments:
       - name: volume-setup
         type: init
-        pod: containers/volume-setup/volume-setup-pod.yaml
+        pod: containers/volume-setup/volume-setup-pod.yaml.j2
         variables:
           INIT_TYPE: volume-setup
       - name: postgres
         type: postgres
-        pod: containers/postgres/postgres-pod.yaml
+        pod: containers/postgres/postgres-pod.yaml.j2
         depends_on: [volume-setup]
         variables:
           DB_NAME: unified_staging
@@ -85,7 +89,7 @@ environments:
           DB_PASSWORD: "dev_password123"
       - name: apache
         type: web
-        pod: containers/apache/apache-pod.yaml
+        pod: containers/apache/apache-pod.yaml.j2
         depends_on: [postgres, volume-setup]
         variables:
           SERVER_NAME: staging.unified.local
@@ -93,7 +97,7 @@ environments:
           APACHE_LOG_LEVEL: info
       - name: mail
         type: mail
-        pod: containers/mail/mail-pod.yaml
+        pod: containers/mail/mail-pod.yaml.j2
         depends_on: [postgres, volume-setup]
         variables:
           # Mail-specific variables
@@ -125,18 +129,23 @@ environments:
       SERVER_ADMIN: "staging@unified.local"
       APACHE_LOG_LEVEL: "info"
       APP_VERSION: "staging-0.1.0"
+      POSTSTACK_ENVIRONMENT: staging
+      # Network mode configuration (host for staging environment - for fail2ban)
+      NETWORK_MODE: "host"
+      MAIL_USE_HOST_NETWORK: "true"
+      APACHE_USE_HOST_NETWORK: "true"
 
   # Production environment - for live deployment
   production:
     deployments:
       - name: volume-setup
         type: init
-        pod: containers/volume-setup/volume-setup-pod.yaml
+        pod: containers/volume-setup/volume-setup-pod.yaml.j2
         variables:
           INIT_TYPE: volume-setup
       - name: postgres
         type: postgres
-        pod: containers/postgres/postgres-pod.yaml
+        pod: containers/postgres/postgres-pod.yaml.j2
         depends_on: [volume-setup]
         variables:
           DB_NAME: unified_prod
@@ -145,7 +154,7 @@ environments:
           DB_PASSWORD: "dev_password123"
       - name: apache
         type: web
-        pod: containers/apache/apache-pod.yaml
+        pod: containers/apache/apache-pod.yaml.j2
         depends_on: [postgres, volume-setup]
         variables:
           SERVER_NAME: unified.example.com
@@ -153,7 +162,7 @@ environments:
           APACHE_LOG_LEVEL: warn
       - name: mail
         type: mail
-        pod: containers/mail/mail-pod.yaml
+        pod: containers/mail/mail-pod.yaml.j2
         depends_on: [postgres, volume-setup]
         variables:
           # Mail-specific variables
@@ -185,3 +194,8 @@ environments:
       SERVER_ADMIN: "admin@unified.example.com"
       APACHE_LOG_LEVEL: "warn"
       APP_VERSION: "1.0.0"
+      POSTSTACK_ENVIRONMENT: production
+      # Network mode configuration (host for production environment - for fail2ban)
+      NETWORK_MODE: "host"
+      MAIL_USE_HOST_NETWORK: "true"
+      APACHE_USE_HOST_NETWORK: "true"
