@@ -11,11 +11,11 @@ RUN apt-get update && \
 RUN groupadd -g 9999 certgroup || true
 
 # Create setup script
-COPY setup-volumes.sh /usr/local/bin/setup-volumes.sh
+COPY containers/volume-setup/setup-volumes.sh /usr/local/bin/setup-volumes.sh
 RUN chmod +x /usr/local/bin/setup-volumes.sh
 
 # Create UID mapping script
-COPY uid-mapping.sh /usr/local/bin/uid-mapping.sh
+COPY containers/volume-setup/uid-mapping.sh /usr/local/bin/uid-mapping.sh
 RUN chmod +x /usr/local/bin/uid-mapping.sh
 
 ENTRYPOINT ["/usr/local/bin/setup-volumes.sh"]
