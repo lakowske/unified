@@ -192,5 +192,11 @@ Now you can start coding with all quality checks automated!
   - `poststack env stop dev --rm` - stops dev environment and removes containers
   - `poststack env restart dev` - performs clean restart (stop with removal, then start)
   - Only use direct `podman` commands as a last resort when poststack commands are not available
+- **Always use poststack for database migrations**: Use `poststack db [command]` for managing database schema changes
+  - `poststack db migrate-project` - applies all pending migrations from local migrations directory
+  - `poststack db migrate-project --dry-run` - shows what migrations would be applied without running them
+  - `poststack db migration-status` - shows current migration status and applied/pending migrations
+  - `poststack db rollback <version>` - rolls back database to a specific migration version
+  - `poststack db shell` - opens PostgreSQL shell for manual operations if needed
 - **Dockerfile paths**: When building from project root context, use full paths like `containers/service/file.ext` in COPY commands
 - **Build context**: Containers should be built from the unified project root directory, not from individual container directories

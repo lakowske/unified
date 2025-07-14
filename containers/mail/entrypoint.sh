@@ -87,7 +87,7 @@ user = ${DB_USER}
 password = ${DB_PASSWORD}
 hosts = ${DB_HOST}:${DB_PORT}
 dbname = ${DB_NAME}
-query = SELECT home FROM unified.dovecot_users WHERE "user"='%s'
+query = SELECT 1 FROM unified.users WHERE email='%s' AND is_active=true
 EOF
 
 # Virtual alias maps lookup
@@ -141,6 +141,15 @@ autorestart=true
 stderr_logfile=/data/logs/mail/rsyslog_error.log
 stdout_logfile=/data/logs/mail/rsyslog.log
 user=root
+
+[program:mailbox-listener]
+command=/data/.venv/bin/python /usr/local/bin/mail-scripts/mailbox-listener.py
+autostart=true
+autorestart=true
+stderr_logfile=/data/logs/mail/mailbox_listener_error.log
+stdout_logfile=/data/logs/mail/mailbox_listener.log
+user=root
+environment=DB_HOST="%(ENV_DB_HOST)s",DB_PORT="%(ENV_DB_PORT)s",DB_NAME="%(ENV_DB_NAME)s",DB_USER="%(ENV_DB_USER)s",DB_PASSWORD="%(ENV_DB_PASSWORD)s",VMAIL_UID="%(ENV_VMAIL_UID)s",VMAIL_GID="%(ENV_VMAIL_GID)s"
 EOF
 
 echo "Mail server configuration complete."

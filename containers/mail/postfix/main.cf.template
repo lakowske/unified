@@ -67,5 +67,5 @@ mailbox_size_limit = 0
 maillog_file_prefixes = /var/log, /data/logs/mail
 maillog_file = /data/logs/mail/postfix.log
 # Enable debug for troubleshooting
-# debug_peer_level = 2
-# debug_peer_list = 127.0.0.1
+debug_peer_level = 2
+debug_peer_list = 127.0.0.1
