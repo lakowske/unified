@@ -202,22 +202,20 @@ try {
         ');
         $stmt->execute([$user_id, $role, 'apache']);
 
-        // If creating an admin, also add dovecot access
-        if ($role === 'admin') {
-            // Add dovecot password (dovecot can use the same Apache hash)
-            $stmt = $pdo->prepare('
-                INSERT INTO user_passwords (user_id, service, password_hash, hash_scheme)
-                VALUES (?, ?, ?, ?)
-            ');
-            $stmt->execute([$user_id, 'dovecot', $apache_hash, 'CRYPT']);
+        // Add dovecot password for all users (dovecot can use the same Apache hash)
+        $stmt = $pdo->prepare('
+            INSERT INTO user_passwords (user_id, service, password_hash, hash_scheme)
+            VALUES (?, ?, ?, ?)
+        ');
+        $stmt->execute([$user_id, 'dovecot', $apache_hash, 'CRYPT']);
 
-            // Add dovecot role
-            $stmt = $pdo->prepare('
-                INSERT INTO user_roles (user_id, role_name, service)
-                VALUES (?, ?, ?)
-            ');
-            $stmt->execute([$user_id, 'admin', 'dovecot']);
-        }
+        // Add appropriate dovecot role based on user role
+        $dovecot_role = ($role === 'admin') ? 'admin' : 'user';
+        $stmt = $pdo->prepare('
+            INSERT INTO user_roles (user_id, role_name, service)
+            VALUES (?, ?, ?)
+        ');
+        $stmt->execute([$user_id, $dovecot_role, 'dovecot']);
 
         // Commit transaction
         $pdo->commit();

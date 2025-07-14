@@ -42,7 +42,7 @@ spec:
     image: localhost/unified/mail:latest
     ports:
     - containerPort: 25
-      hostPort: ${MAIL_SMTP_PORT:-2526}
+      hostPort: ${MAIL_SMTP_PORT:-2525}
       protocol: TCP
     - containerPort: 143
       hostPort: ${MAIL_IMAP_PORT:-1144}

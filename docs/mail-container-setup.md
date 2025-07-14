@@ -47,7 +47,7 @@ containers/mail/
 | `MAIL_DOMAIN`    | Primary mail domain   | `localhost` | `unified.local`    |
 | `MAIL_LOG_LEVEL` | Logging verbosity     | `info`      | `debug`, `warn`    |
 | `MAIL_SMTP_PORT` | Host SMTP port        | `2525`      | `25` (production)  |
-| `MAIL_IMAP_PORT` | Host IMAP port        | `1143`      | `143` (production) |
+| `MAIL_IMAP_PORT` | Host IMAP port        | `1144`      | `143` (production) |
 | `VMAIL_UID`      | Mail storage user ID  | `5000`      | `5000`             |
 | `VMAIL_GID`      | Mail storage group ID | `5000`      | `5000`             |
 

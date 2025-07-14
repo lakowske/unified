@@ -1,7 +1,10 @@
 """Configuration and fixtures for mail container tests."""
 
+import base64
+import crypt
 import logging
 import os
+import secrets
 import uuid
 from typing import Generator, Tuple
 
@@ -21,7 +24,7 @@ def mail_config():
         "smtp_host": os.getenv("MAIL_SMTP_HOST", "localhost"),
         "smtp_port": int(os.getenv("MAIL_SMTP_PORT", "2525")),
         "imap_host": os.getenv("MAIL_IMAP_HOST", "localhost"),
-        "imap_port": int(os.getenv("MAIL_IMAP_PORT", "1143")),
+        "imap_port": int(os.getenv("MAIL_IMAP_PORT", "1144")),
         "mail_domain": os.getenv("MAIL_DOMAIN", "localhost"),
     }
 
@@ -76,13 +79,18 @@ def test_user(db_connection, mail_config) -> Generator[Tuple[str, str], None, No
 
         user_id = cursor.fetchone()[0]
 
+        # Create CRYPT hash for dovecot password (matching PHP script logic)
+        # Generate Apache MD5 hash compatible with htpasswd -m
+        salt = "$1$" + base64.b64encode(secrets.token_bytes(6)).decode("ascii")[:8] + "$"
+        crypt_hash = crypt.crypt(password, salt)
+
         # Insert dovecot password entry
         cursor.execute(
             """
             INSERT INTO unified.user_passwords (user_id, service, password_hash, hash_scheme)
-            VALUES (%s, 'dovecot', %s, 'PLAIN')
+            VALUES (%s, 'dovecot', %s, 'CRYPT')
         """,
-            (user_id, password),
+            (user_id, crypt_hash),
         )
 
         db_connection.commit()
@@ -128,12 +136,16 @@ def test_user_pair(db_connection, mail_config) -> Generator[Tuple[Tuple[str, str
             user_id = cursor.fetchone()[0]
             user_ids.append(user_id)
 
+            # Create CRYPT hash for dovecot password (matching PHP script logic)
+            salt = "$1$" + base64.b64encode(secrets.token_bytes(6)).decode("ascii")[:8] + "$"
+            crypt_hash = crypt.crypt(password, salt)
+
             cursor.execute(
                 """
                 INSERT INTO unified.user_passwords (user_id, service, password_hash, hash_scheme)
-                VALUES (%s, 'dovecot', %s, 'PLAIN')
+                VALUES (%s, 'dovecot', %s, 'CRYPT')
             """,
-                (user_id, password),
+                (user_id, crypt_hash),
             )
 
             users.append((email, password))

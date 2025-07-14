@@ -4,13 +4,14 @@
 driver = pgsql
 connect = host=${DB_HOST} port=${DB_PORT} dbname=${DB_NAME} user=${DB_USER} password=${DB_PASSWORD} sslmode=${DB_SSLMODE}
 
-# Default password scheme
-default_pass_scheme = PLAIN
+# Default password scheme - use the scheme from database
+default_pass_scheme = CRYPT
 
 # Password query for authentication
 # Uses the unified.dovecot_auth view created in migration
+# Include the scheme field to support multiple password formats
 password_query = \
-  SELECT username, domain, password, 'Y' as nopassword, 'Y' as nodelay \
+  SELECT username, domain, password, scheme, 'Y' as nopassword, 'Y' as nodelay \
   FROM unified.dovecot_auth \
   WHERE "user" = '%u' AND domain = '%d' AND is_active = true
 

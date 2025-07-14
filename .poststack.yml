@@ -41,7 +41,7 @@ environments:
           # Mail-specific variables
           MAIL_DOMAIN: dev.unified.local
           MAIL_LOG_LEVEL: debug
-          MAIL_SMTP_PORT: "2526"
+          MAIL_SMTP_PORT: "2525"
           MAIL_IMAP_PORT: "1144"
     init: []
     volumes:
@@ -99,7 +99,7 @@ environments:
           # Mail-specific variables
           MAIL_DOMAIN: staging.unified.local
           MAIL_LOG_LEVEL: info
-          MAIL_SMTP_PORT: "2526"
+          MAIL_SMTP_PORT: "2525"
           MAIL_IMAP_PORT: "1144"
     init: []
     volumes:

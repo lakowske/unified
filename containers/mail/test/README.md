@@ -66,7 +66,7 @@ Set these environment variables for your test environment:
 export MAIL_SMTP_HOST=localhost
 export MAIL_SMTP_PORT=2525
 export MAIL_IMAP_HOST=localhost
-export MAIL_IMAP_PORT=1143
+export MAIL_IMAP_PORT=1144
 export MAIL_DOMAIN=localhost
 
 # Database configuration
@@ -220,7 +220,7 @@ Example GitHub Actions workflow:
     MAIL_SMTP_HOST: localhost
     MAIL_SMTP_PORT: 2525
     MAIL_IMAP_HOST: localhost
-    MAIL_IMAP_PORT: 1143
+    MAIL_IMAP_PORT: 1144
     MAIL_DOMAIN: localhost
     DB_HOST: localhost
     DB_PORT: 5432
