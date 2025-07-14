@@ -1,0 +1,39 @@
+# Local jail configuration to override defaults
+# This file disables default jails that don't apply to our setup
+
+[DEFAULT]
+# Override default to make sure we control all jails explicitly
+enabled = false
+
+[sshd]
+# Disable SSH jail since we don't have SSH logs and don't need SSH protection in containers
+enabled = false
+
+[dropbear]
+enabled = false
+
+[selinux-ssh]
+enabled = false
+
+[3proxy]
+enabled = false
+
+[apache-auth]
+# Re-enable our custom Apache jail (defined in jail.conf)
+enabled = true
+
+[postfix]
+# Re-enable postfix monitoring (defined in jail.conf) 
+enabled = true
+
+[postfix-rbl]
+# Disable postfix RBL monitoring (filter not available)
+enabled = false
+
+[dovecot]
+# Re-enable dovecot monitoring (defined in jail.conf)
+enabled = true
+
+[recidive]
+# Disable repeat offender jail (log path issues)
+enabled = false

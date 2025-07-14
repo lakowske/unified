@@ -22,6 +22,15 @@ export UNIFIED_DB_USER=${UNIFIED_DB_USER:-poststack}
 export UNIFIED_DB_PASSWORD=${UNIFIED_DB_PASSWORD:-poststack_dev}
 export UNIFIED_DB_SCHEMA=${UNIFIED_DB_SCHEMA:-unified}
 
+# Certificate generation database URL
+export DATABASE_URL="postgresql://${UNIFIED_DB_USER}:${UNIFIED_DB_PASSWORD}@${UNIFIED_DB_HOST}:${UNIFIED_DB_PORT}/${UNIFIED_DB_NAME}"
+
+# SSL/TLS Certificate configuration
+export SSL_ENABLED=${SSL_ENABLED:-false}
+export SSL_REDIRECT=${SSL_REDIRECT:-false}
+export CERT_TYPE=${CERT_TYPE:-self-signed}
+export APACHE_SERVER_NAME=${APACHE_SERVER_NAME:-localhost}
+
 # Create run directory
 mkdir -p $APACHE_RUN_DIR
 
@@ -37,6 +46,84 @@ envsubst < /etc/apache2/apache2.conf.template > /etc/apache2/apache2.conf
 
 # Replace placeholders in site configuration
 envsubst < /etc/apache2/sites-available/unified.conf.template > /etc/apache2/sites-available/unified.conf
+
+# SSL certificate setup and site configuration
+if [ "$SSL_ENABLED" = "true" ]; then
+    echo "SSL enabled - configuring HTTPS virtual host..."
+    
+    # Determine certificate paths based on certificate type and domain
+    CERT_DIR="/data/certificates"
+    CERT_DOMAIN="${APACHE_SERVER_NAME}"
+    
+    # Check for certificates in live directory first
+    if [ -f "$CERT_DIR/live/$CERT_DOMAIN/fullchain.pem" ] && [ -f "$CERT_DIR/live/$CERT_DOMAIN/privkey.pem" ]; then
+        echo "Found live certificates for $CERT_DOMAIN"
+        export SSL_CERT_PATH="$CERT_DIR/live/$CERT_DOMAIN/fullchain.pem"
+        export SSL_KEY_PATH="$CERT_DIR/live/$CERT_DOMAIN/privkey.pem"
+        export SSL_CHAIN_PATH="$CERT_DIR/live/$CERT_DOMAIN/chain.pem"
+    elif [ -f "$CERT_DIR/self-signed/$CERT_DOMAIN/fullchain.pem" ] && [ -f "$CERT_DIR/self-signed/$CERT_DOMAIN/privkey.pem" ]; then
+        echo "Found self-signed certificates for $CERT_DOMAIN"
+        export SSL_CERT_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/fullchain.pem"
+        export SSL_KEY_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/privkey.pem"
+        export SSL_CHAIN_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/fullchain.pem"
+    else
+        echo "WARNING: No certificates found for $CERT_DOMAIN, generating self-signed certificate..."
+        
+        # Use the certificate generation script
+        if /usr/local/bin/generate-certificate.sh self-signed "$CERT_DOMAIN"; then
+            echo "Certificate generated successfully, checking paths again..."
+            
+            # Check again for the generated certificate
+            if [ -f "$CERT_DIR/live/$CERT_DOMAIN/fullchain.pem" ] && [ -f "$CERT_DIR/live/$CERT_DOMAIN/privkey.pem" ]; then
+                export SSL_CERT_PATH="$CERT_DIR/live/$CERT_DOMAIN/fullchain.pem"
+                export SSL_KEY_PATH="$CERT_DIR/live/$CERT_DOMAIN/privkey.pem"
+                export SSL_CHAIN_PATH="$CERT_DIR/live/$CERT_DOMAIN/chain.pem"
+                echo "Self-signed certificate ready for $CERT_DOMAIN"
+            else
+                echo "ERROR: Certificate generation reported success but files not found"
+                export SSL_ENABLED="false"
+                echo "SSL disabled due to certificate generation failure"
+            fi
+        else
+            echo "ERROR: Certificate generation failed"
+            export SSL_ENABLED="false"
+            echo "SSL disabled due to certificate generation failure"
+        fi
+    fi
+    
+    # Only verify certificate files if SSL is still enabled
+    if [ "$SSL_ENABLED" = "true" ]; then
+        # Verify certificate files exist and are readable
+        if [ ! -f "$SSL_CERT_PATH" ] || [ ! -f "$SSL_KEY_PATH" ]; then
+            echo "ERROR: SSL certificate files not found or not readable"
+            echo "Certificate: $SSL_CERT_PATH"
+            echo "Private Key: $SSL_KEY_PATH"
+            exit 1
+        fi
+    fi
+    
+    if [ "$SSL_ENABLED" = "true" ]; then
+        echo "Using SSL certificates:"
+        echo "  Certificate: $SSL_CERT_PATH"
+        echo "  Private Key: $SSL_KEY_PATH"
+        echo "  Chain: $SSL_CHAIN_PATH"
+        
+        # Process SSL virtual host template
+        envsubst < /etc/apache2/sites-available/unified-ssl.conf.template > /etc/apache2/sites-available/unified-ssl.conf
+        
+        # Enable SSL site and modules
+        a2ensite unified-ssl
+        a2enmod ssl
+        
+        echo "SSL virtual host configured and enabled"
+    fi
+    
+    # Create ACME challenge directory for Let's Encrypt
+    mkdir -p /var/www/acme-challenge
+    chown www-data:www-data /var/www/acme-challenge
+else
+    echo "SSL disabled - using HTTP only"
+fi
 
 # Enable the unified site
 a2ensite unified

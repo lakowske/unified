@@ -1,0 +1,167 @@
+# SSL Virtual Host configuration for unified project
+# Serves the unified web application over HTTPS
+
+<VirtualHost *:443>
+    ServerName ${APACHE_SERVER_NAME}
+    ServerAlias www.${APACHE_SERVER_NAME}
+    DocumentRoot /var/www/unified
+    DirectoryIndex index.php index.html
+
+    # SSL Configuration
+    SSLEngine on
+    SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1
+    SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384
+    SSLHonorCipherOrder off
+    SSLSessionTickets off
+
+    # Certificate paths - will be populated by entrypoint script
+    SSLCertificateFile ${SSL_CERT_PATH}
+    SSLCertificateKeyFile ${SSL_KEY_PATH}
+    SSLCertificateChainFile ${SSL_CHAIN_PATH}
+
+    # HSTS (HTTP Strict Transport Security)
+    Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    Header always set X-Frame-Options DENY
+    Header always set X-Content-Type-Options nosniff
+
+    # OCSP Stapling (if supported)
+    SSLUseStapling off
+    SSLStaplingResponderTimeout 5
+    SSLStaplingReturnResponderErrors off
+
+    # Logging - Fail2ban compatible format
+    ErrorLog ${APACHE_LOG_DIR}/unified_ssl_error.log
+    CustomLog ${APACHE_LOG_DIR}/unified_ssl_access.log fail2ban_combined
+    CustomLog ${APACHE_LOG_DIR}/unified_ssl_auth.log fail2ban_auth expr=%{REQUEST_STATUS}==401
+
+    # PHP Configuration
+    <FilesMatch \.php$>
+        SetHandler application/x-httpd-php
+    </FilesMatch>
+
+    # Security and performance
+    <Directory /var/www/unified>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        # Enable compression
+        <IfModule mod_deflate.c>
+            AddOutputFilterByType DEFLATE text/plain
+            AddOutputFilterByType DEFLATE text/html
+            AddOutputFilterByType DEFLATE text/xml
+            AddOutputFilterByType DEFLATE text/css
+            AddOutputFilterByType DEFLATE application/xml
+            AddOutputFilterByType DEFLATE application/xhtml+xml
+            AddOutputFilterByType DEFLATE application/rss+xml
+            AddOutputFilterByType DEFLATE application/javascript
+            AddOutputFilterByType DEFLATE application/x-javascript
+        </IfModule>
+    </Directory>
+
+    # Health check endpoint
+    Alias /health /var/www/unified/health.php
+
+    # Let's Encrypt ACME challenge directory
+    Alias /.well-known /var/www/.well-known
+    <Directory "/var/www/.well-known">
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    # Protected admin area - requires admin role
+    <Directory "/var/www/unified/admin">
+        AuthType Basic
+        AuthName "Admin Area - Database Authentication Required"
+        AuthBasicProvider dbd
+        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s AND role = 'admin'"
+        Require valid-user
+    </Directory>
+
+    # Protected member area - requires user or admin role
+    <Directory "/var/www/unified/members">
+        AuthType Basic
+        AuthName "Members Only - Database Authentication Required"
+        AuthBasicProvider dbd
+        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s AND role IN ('user', 'admin')"
+        Require valid-user
+    </Directory>
+
+    # API endpoints (for future use)
+    <Location "/api">
+        SetEnvIf Request_URI "^/api" is_api
+        Header set Content-Type "application/json" env=is_api
+    </Location>
+
+    # Static assets caching
+    <LocationMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg)$">
+        ExpiresActive On
+        ExpiresDefault "access plus 1 month"
+        Header set Cache-Control "public, max-age=2592000"
+    </LocationMatch>
+
+    # Environment variables for PHP
+    SetEnv UNIFIED_DB_HOST ${UNIFIED_DB_HOST}
+    SetEnv UNIFIED_DB_PORT ${UNIFIED_DB_PORT}
+    SetEnv UNIFIED_DB_NAME ${UNIFIED_DB_NAME}
+    SetEnv UNIFIED_DB_USER ${UNIFIED_DB_USER}
+    SetEnv UNIFIED_DB_PASSWORD ${UNIFIED_DB_PASSWORD}
+    SetEnv UNIFIED_DB_SCHEMA ${UNIFIED_DB_SCHEMA}
+</VirtualHost>
+
+# HTTP to HTTPS redirect (if SSL_REDIRECT is enabled)
+<VirtualHost *:80>
+    ServerName ${APACHE_SERVER_NAME}
+    ServerAlias www.${APACHE_SERVER_NAME}
+    
+    # Let's Encrypt ACME challenge directory (allow HTTP for certificate validation)
+    Alias /.well-known /var/www/.well-known
+    <Directory "/var/www/.well-known">
+        Options None
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    # Health check endpoint (allow HTTP for health checks)
+    Alias /health /var/www/unified/health.php
+    <Location "/health">
+        Require all granted
+    </Location>
+
+    # Conditional redirect to HTTPS (except for ACME challenges and health checks)
+    <If "%{ENV:SSL_REDIRECT} == 'true' && %{REQUEST_URI} !~ m#^/\.well-known/acme-challenge/# && %{REQUEST_URI} !~ m#^/health#">
+        Redirect permanent / https://${APACHE_SERVER_NAME}/
+    </If>
+    
+    # Content serving configuration (outside If blocks since DocumentRoot can't be in If context)
+    DocumentRoot /var/www/unified
+    DirectoryIndex index.php index.html
+    
+    <Directory /var/www/unified>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    
+    # Protected areas with same authentication
+    <Directory "/var/www/unified/admin">
+        AuthType Basic
+        AuthName "Admin Area - Database Authentication Required"
+        AuthBasicProvider dbd
+        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s AND role = 'admin'"
+        Require valid-user
+    </Directory>
+
+    <Directory "/var/www/unified/members">
+        AuthType Basic
+        AuthName "Members Only - Database Authentication Required"
+        AuthBasicProvider dbd
+        AuthDBDUserPWQuery "SELECT password FROM unified.apache_auth WHERE username = %s AND role IN ('user', 'admin')"
+        Require valid-user
+    </Directory>
+
+    # Logging
+    ErrorLog ${APACHE_LOG_DIR}/unified_error.log
+    CustomLog ${APACHE_LOG_DIR}/unified_access.log fail2ban_combined
+</VirtualHost>

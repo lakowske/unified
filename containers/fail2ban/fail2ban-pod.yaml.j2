@@ -1,0 +1,117 @@
+# Podman Pod specification for Fail2ban intrusion prevention system
+# This file demonstrates poststack's environment management with Jinja2 template processing
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unified-fail2ban-{{ ENVIRONMENT }}
+  labels:
+    app: fail2ban
+    environment: {{ ENVIRONMENT }}
+    managed-by: poststack
+    project: unified
+spec:
+  # Use host networking for iptables access - fail2ban needs to modify host firewall rules
+  hostNetwork: true
+  # Use host PID namespace for better process management
+  hostPID: false
+  # Security context for privileged operations
+  securityContext:
+    # Run as root for iptables access
+    runAsUser: 0
+    runAsGroup: 0
+    # Allow privileged operations for iptables
+    privileged: true
+  containers:
+  - name: fail2ban
+    image: localhost/unified/fail2ban:latest
+    # Security context with required capabilities
+    securityContext:
+      privileged: true
+      capabilities:
+        add:
+          - NET_ADMIN
+          - NET_RAW
+          - SYS_ADMIN
+    env:
+    # Fail2ban configuration
+    - name: ENVIRONMENT
+      value: "{{ ENVIRONMENT }}"
+    - name: FAIL2BAN_LOG_LEVEL
+      value: "{{ FAIL2BAN_LOG_LEVEL | default('INFO') }}"
+    - name: FAIL2BAN_BANTIME
+      value: "{{ FAIL2BAN_BANTIME | default('3600') }}"
+    - name: FAIL2BAN_FINDTIME
+      value: "{{ FAIL2BAN_FINDTIME | default('600') }}"
+    - name: FAIL2BAN_MAXRETRY
+      value: "{{ FAIL2BAN_MAXRETRY | default('5') }}"
+    # Log target configuration
+    - name: FAIL2BAN_LOG_TARGET
+      value: "/var/log/fail2ban/fail2ban.log"
+    - name: FAIL2BAN_SOCKET
+      value: "/var/run/fail2ban/fail2ban.sock"
+    - name: FAIL2BAN_PIDFILE
+      value: "/var/run/fail2ban/fail2ban.pid"
+    # User-defined environment-specific variables
+    - name: LOG_LEVEL
+      value: "{{ LOG_LEVEL | default('info') }}"
+    - name: DEBUG_MODE
+      value: "{{ DEBUG_MODE | default('false') }}"
+    volumeMounts:
+    # Mount logs volume (read-only) to monitor Apache, Postfix, Dovecot logs
+    - name: unified-logs
+      mountPath: /data/logs
+      readOnly: true
+    # Mount fail2ban data volume for persistent ban database
+    - name: fail2ban-data
+      mountPath: /data/fail2ban/database
+    # Mount fail2ban config volume for custom configurations
+    - name: fail2ban-config
+      mountPath: /data/fail2ban/config
+    # Resources - fail2ban is lightweight but may need CPU for regex processing
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    # Health check using fail2ban-client
+    livenessProbe:
+      exec:
+        command:
+          - "/bin/sh"
+          - "-c"
+          - "fail2ban-client ping"
+      initialDelaySeconds: 30
+      periodSeconds: 60
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readinessProbe:
+      exec:
+        command:
+          - "/bin/sh"
+          - "-c" 
+          - "fail2ban-client ping && test -S /var/run/fail2ban/fail2ban.sock"
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 2
+  volumes:
+  # Logs volume (shared with other services)
+  - name: unified-logs
+    {{ VOLUME_UNIFIED_LOGS_TYPE }}: {{ VOLUME_UNIFIED_LOGS_CONFIG }}
+  # Fail2ban persistent data volume
+  - name: fail2ban-data
+    {{ VOLUME_FAIL2BAN_DATA_TYPE }}: {{ VOLUME_FAIL2BAN_DATA_CONFIG }}
+  # Fail2ban configuration volume
+  - name: fail2ban-config
+    {{ VOLUME_FAIL2BAN_CONFIG_TYPE }}: {{ VOLUME_FAIL2BAN_CONFIG_CONFIG }}
+  restartPolicy: Always
+
+# Pod notes:
+# - Uses host networking for iptables access to block IPs on host firewall
+# - Requires privileged mode and specific capabilities (NET_ADMIN, NET_RAW, SYS_ADMIN)
+# - Monitors shared logs volume from Apache, Postfix, and Dovecot
+# - Maintains persistent ban database and allows custom configuration
+# - Health checks ensure fail2ban service is running and responsive
+# - Resource limits prevent excessive CPU usage during log processing
