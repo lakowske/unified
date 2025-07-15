@@ -226,3 +226,20 @@ Now you can start coding with all quality checks automated!
 - Use absolute paths for critical operations: `/home/seth/Software/dev/unified/`
 - Be explicit about directory context in poststack commands
 - Remember that `cd` commands in Claude Code **do** persist across tool calls (unlike normal subshells)
+
+### Container Logging
+
+**⚠️ IMPORTANT: Container Logs Location**
+
+- All service logs are stored in the `/data/logs/` volume mount within containers
+- **Mail service logs** are located at `/data/logs/mail/` inside the mail container
+- **Common log files in mail service**:
+  - `postfix.log` - Main Postfix mail server logs
+  - `dovecot-info.log` - Dovecot IMAP server logs
+  - `dovecot-debug.log` - Detailed Dovecot debugging logs
+  - `mailbox_listener_error.log` - Mailbox creation/deletion events
+  - `certificate_watcher_error.log` - SSL certificate monitoring
+  - `supervisord.log` - Process management logs
+- **Always check the logs volume first** when troubleshooting service issues
+- Use `podman exec [container] tail -20 /data/logs/[service]/[logfile]` to view recent logs
+- Example: `podman exec unified-mail-dev-mail-server tail -20 /data/logs/mail/postfix.log`

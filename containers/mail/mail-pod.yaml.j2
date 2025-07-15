@@ -51,6 +51,15 @@ spec:
     - containerPort: 143
       hostPort: {{ MAIL_IMAP_PORT | default('1144') }}
       protocol: TCP
+    - containerPort: 993
+      hostPort: {{ MAIL_IMAPS_PORT | default('9933') }}
+      protocol: TCP
+    - containerPort: 465
+      hostPort: {{ MAIL_SMTPS_PORT | default('4465') }}
+      protocol: TCP
+    - containerPort: 587
+      hostPort: {{ MAIL_SUBMISSION_PORT | default('5587') }}
+      protocol: TCP
 {% endif %}
     env:
     # Database connection variables (auto-generated from service discovery)
@@ -84,6 +93,11 @@ spec:
       value: "{{ VMAIL_UID | default('5000') }}"
     - name: VMAIL_GID
       value: "{{ VMAIL_GID | default('5000') }}"
+    # SSL/TLS Certificate configuration
+    - name: SSL_ENABLED
+      value: "{{ SSL_ENABLED | default('false') }}"
+    - name: CERT_TYPE_PREFERENCE
+      value: "{{ CERT_TYPE_PREFERENCE | default('') }}"
     # Application-specific configuration
     - name: APP_NAME
       value: "Unified Mail Server"
@@ -96,6 +110,8 @@ spec:
       mountPath: /data/logs
     - name: mail-config
       mountPath: /etc/dovecot/conf.d
+    - name: certificates
+      mountPath: /data/certificates
     resources:
       requests:
         memory: "256Mi"
@@ -126,4 +142,6 @@ spec:
     {{ VOLUME_UNIFIED_LOGS_TYPE }}: {{ VOLUME_UNIFIED_LOGS_CONFIG }}
   - name: mail-config
     {{ VOLUME_MAIL_CONFIG_TYPE }}: {{ VOLUME_MAIL_CONFIG_CONFIG }}
+  - name: certificates
+    {{ VOLUME_CERTIFICATES_TYPE }}: {{ VOLUME_CERTIFICATES_CONFIG }}
   restartPolicy: Always

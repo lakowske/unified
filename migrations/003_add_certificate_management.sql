@@ -122,6 +122,28 @@ CREATE TABLE unified.certificate_renewals (
     CHECK (renewal_method IN ('automatic', 'manual', 'forced'))
 );
 
+-- Service certificate usage tracking
+CREATE TABLE unified.service_certificates (
+    id SERIAL PRIMARY KEY,
+    service_name VARCHAR(100) NOT NULL, -- 'apache', 'mail', 'nginx', etc.
+    domain VARCHAR(255) NOT NULL,
+    certificate_type VARCHAR(50) NOT NULL, -- 'live', 'staged', 'self-signed', 'none'
+    ssl_enabled BOOLEAN DEFAULT false,
+    certificate_path VARCHAR(500),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
+    
+    -- Constraints
+    UNIQUE(service_name, domain),
+    CHECK (certificate_type IN ('live', 'staged', 'self-signed', 'none'))
+);
+
+-- Index for service certificate lookups
+CREATE INDEX idx_service_certificates_service ON unified.service_certificates(service_name);
+CREATE INDEX idx_service_certificates_domain ON unified.service_certificates(domain);
+CREATE INDEX idx_service_certificates_type ON unified.service_certificates(certificate_type);
+CREATE INDEX idx_service_certificates_active ON unified.service_certificates(is_active);
+
 -- ================================================================
 -- CERTIFICATE MANAGEMENT VIEWS
 -- ================================================================

@@ -22,14 +22,14 @@ virtual_uid_maps = static:${VMAIL_UID}
 virtual_gid_maps = static:${VMAIL_GID}
 virtual_mailbox_base = /var/mail
 
-# PostgreSQL virtual domain lookup
-virtual_mailbox_domains = pgsql:/etc/postfix/sql/virtual_domains.cf
+# PostgreSQL virtual domain lookup (with proxy for connection pooling)
+virtual_mailbox_domains = proxy:pgsql:/etc/postfix/sql/virtual_domains.cf
 
-# PostgreSQL virtual user lookup
-virtual_mailbox_maps = pgsql:/etc/postfix/sql/virtual_users.cf
+# PostgreSQL virtual user lookup (with proxy for connection pooling)
+virtual_mailbox_maps = proxy:pgsql:/etc/postfix/sql/virtual_users.cf
 
-# PostgreSQL virtual alias lookup
-virtual_alias_maps = pgsql:/etc/postfix/sql/virtual_aliases.cf
+# PostgreSQL virtual alias lookup (with proxy for connection pooling)
+virtual_alias_maps = proxy:pgsql:/etc/postfix/sql/virtual_aliases.cf
 
 # Delivery settings
 virtual_transport = virtual
@@ -40,6 +40,11 @@ smtpd_banner = $myhostname ESMTP $mail_name (Unified Mail Server)
 biff = no
 append_dot_mydomain = no
 readme_directory = no
+
+# Timeout settings for database operations
+smtpd_timeout = 600s
+smtpd_proxy_timeout = 600s
+smtpd_policy_service_timeout = 600s
 
 # TLS settings (can be enabled later)
 smtpd_use_tls = no
@@ -62,6 +67,12 @@ broken_sasl_auth_clients = yes
 # Message size limits (50MB)
 message_size_limit = 52428800
 mailbox_size_limit = 0
+
+# OpenDKIM integration
+milter_protocol = 6
+milter_default_action = accept
+smtpd_milters = inet:localhost:8891
+non_smtpd_milters = inet:localhost:8891
 
 # Logging
 maillog_file_prefixes = /var/log, /data/logs/mail

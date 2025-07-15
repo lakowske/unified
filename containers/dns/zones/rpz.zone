@@ -1,0 +1,18 @@
+$TTL 60
+rpz    IN    SOA    localhost. root.localhost. (
+                    2025071501    ; serial
+                    3600          ; refresh
+                    1800          ; retry
+                    604800        ; expire
+                    60            ; minimum
+                    )
+       IN    NS     localhost.
+
+; Response Policy Zone (RPZ) entries
+; Examples of how to block domains:
+; badsite.com             CNAME   .
+; malware.example.com     CNAME   .
+; ads.tracker.com         CNAME   .
+
+; Examples of how to redirect domains:
+; redirect.example.com    CNAME   safe.example.com.

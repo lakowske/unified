@@ -1,0 +1,58 @@
+; DNS Zone file for ${MAIL_DOMAIN}
+; This zone contains mail-related DNS records including DKIM, SPF, and DMARC
+
+$TTL 3600
+@    IN    SOA    ${MAIL_DOMAIN}. root.${MAIL_DOMAIN}. (
+                    2025071501    ; serial (YYYYMMDDNN)
+                    3600          ; refresh (1 hour)
+                    1800          ; retry (30 minutes)
+                    604800        ; expire (1 week)
+                    3600          ; minimum (1 hour)
+                    )
+
+; Name servers
+@    IN    NS     ns1.${MAIL_DOMAIN}.
+@    IN    NS     ns2.${MAIL_DOMAIN}.
+
+; A records for basic domain
+@    IN    A      ${MAIL_SERVER_IP}
+ns1  IN    A      ${MAIL_SERVER_IP}
+ns2  IN    A      ${MAIL_SERVER_IP}
+
+; Mail server records
+@    IN    MX     10 mail.${MAIL_DOMAIN}.
+mail IN    A      ${MAIL_SERVER_IP}
+
+; SPF (Sender Policy Framework) record
+; Allows mail from this server and includes common services
+@    IN    TXT    "v=spf1 a mx ip4:${MAIL_SERVER_IP} include:_spf.google.com ~all"
+
+; DMARC (Domain-based Message Authentication, Reporting & Conformance) record
+; Policy: quarantine, alignment: relaxed, reports enabled
+_dmarc    IN    TXT    "v=DMARC1; p=quarantine; rua=mailto:dmarc@${MAIL_DOMAIN}; ruf=mailto:dmarc@${MAIL_DOMAIN}; sp=quarantine; aspf=r; adkim=r; rf=afrf; fo=1"
+
+; DKIM (DomainKeys Identified Mail) record
+; This will be populated by the mail server during startup
+; mail._domainkey    IN    TXT    "v=DKIM1; h=sha256; k=rsa; p=PLACEHOLDER_DKIM_PUBLIC_KEY"
+
+; Additional mail-related records
+; SMTP TLS Policy
+_smtp._tls.${MAIL_DOMAIN}.    IN    TXT    "v=TLSRPTv1; rua=mailto:tlsrpt@${MAIL_DOMAIN}"
+
+; MTA-STS (Mail Transfer Agent Strict Transport Security)
+_mta-sts.${MAIL_DOMAIN}.    IN    TXT    "v=STSv1; id=20250715T120000Z;"
+mta-sts.${MAIL_DOMAIN}.     IN    A      ${MAIL_SERVER_IP}
+
+; Autodiscover for email clients
+autodiscover    IN    A      ${MAIL_SERVER_IP}
+autoconfig      IN    A      ${MAIL_SERVER_IP}
+
+; Common mail subdomains
+imap    IN    A      ${MAIL_SERVER_IP}
+smtp    IN    A      ${MAIL_SERVER_IP}
+pop3    IN    A      ${MAIL_SERVER_IP}
+webmail IN    A      ${MAIL_SERVER_IP}
+
+; Additional security records
+; BIMI (Brand Indicators for Message Identification) - optional
+; default._bimi.${MAIL_DOMAIN}.    IN    TXT    "v=BIMI1; l=https://${MAIL_DOMAIN}/logo.svg"

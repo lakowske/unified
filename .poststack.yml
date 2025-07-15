@@ -48,10 +48,39 @@ environments:
           MAIL_LOG_LEVEL: debug
           MAIL_SMTP_PORT: "2525"
           MAIL_IMAP_PORT: "1144"
+          # SSL/TLS configuration
+          SSL_ENABLED: "true"
+          MAIL_IMAPS_PORT: "9933"
+          MAIL_SMTPS_PORT: "4465"
+          MAIL_SUBMISSION_PORT: "5587"
+          # Virtual mail user configuration
+          VMAIL_UID: "5000"
+          VMAIL_GID: "5000"
+      - name: dns
+        type: dns
+        pod: containers/dns/dns-pod.yaml.j2
+        depends_on: [volume-setup, postgres]
+        variables:
+          # DNS-specific variables
+          DNS_LOG_LEVEL: info
+          DNS_FORWARDERS: "8.8.8.8;8.8.4.4;1.1.1.1;1.0.0.1"
+          DNS_ALLOW_QUERY: "any"
+          DNS_RECURSION: "yes"
+          DNS_CACHE_SIZE: "100m"
+          DNS_MAX_CACHE_TTL: "3600"
+          # Mail domain configuration
+          MAIL_DOMAIN: lab.sethlakowske.com
+          MAIL_SERVER_IP: "192.168.0.156"
+          # Database connection for DNS records
+          DB_HOST: "localhost"
+          DB_PORT: "5436"
+          DB_NAME: unified_dev
+          DB_USER: unified_dev_user
+          DB_PASSWORD: "dev_password123"
       - name: fail2ban
         type: fail2ban
         pod: containers/fail2ban/fail2ban-pod.yaml.j2
-        depends_on: [apache, mail]
+        depends_on: [apache, mail, dns]
         variables:
           # Fail2ban-specific variables
           FAIL2BAN_LOG_LEVEL: INFO
@@ -77,6 +106,8 @@ environments:
       fail2ban_config:
         type: emptyDir
       certificates:
+        type: named
+      dns_zones:
         type: named
     variables:
       LOG_LEVEL: debug
@@ -126,10 +157,22 @@ environments:
           MAIL_LOG_LEVEL: info
           MAIL_SMTP_PORT: "2525"
           MAIL_IMAP_PORT: "1144"
+      - name: dns
+        type: dns
+        pod: containers/dns/dns-pod.yaml.j2
+        depends_on: [volume-setup]
+        variables:
+          # DNS-specific variables
+          DNS_LOG_LEVEL: info
+          DNS_FORWARDERS: "8.8.8.8;8.8.4.4;1.1.1.1;1.0.0.1"
+          DNS_ALLOW_QUERY: "any"
+          DNS_RECURSION: "yes"
+          DNS_CACHE_SIZE: "100m"
+          DNS_MAX_CACHE_TTL: "3600"
       - name: fail2ban
         type: fail2ban
         pod: containers/fail2ban/fail2ban-pod.yaml.j2
-        depends_on: [apache, mail]
+        depends_on: [apache, mail, dns]
         variables:
           # Fail2ban-specific variables
           FAIL2BAN_LOG_LEVEL: INFO
@@ -155,6 +198,8 @@ environments:
       fail2ban_config:
         type: emptyDir
       certificates:
+        type: named
+      dns_zones:
         type: named
     variables:
       LOG_LEVEL: info
@@ -207,10 +252,22 @@ environments:
           MAIL_LOG_LEVEL: warn
           MAIL_SMTP_PORT: "25"
           MAIL_IMAP_PORT: "143"
+      - name: dns
+        type: dns
+        pod: containers/dns/dns-pod.yaml.j2
+        depends_on: [volume-setup]
+        variables:
+          # DNS-specific variables
+          DNS_LOG_LEVEL: warn
+          DNS_FORWARDERS: "8.8.8.8;8.8.4.4;1.1.1.1;1.0.0.1"
+          DNS_ALLOW_QUERY: "any"
+          DNS_RECURSION: "yes"
+          DNS_CACHE_SIZE: "256m"
+          DNS_MAX_CACHE_TTL: "3600"
       - name: fail2ban
         type: fail2ban
         pod: containers/fail2ban/fail2ban-pod.yaml.j2
-        depends_on: [apache, mail]
+        depends_on: [apache, mail, dns]
         variables:
           # Fail2ban-specific variables
           FAIL2BAN_LOG_LEVEL: WARN
@@ -236,6 +293,8 @@ environments:
       fail2ban_config:
         type: emptyDir
       certificates:
+        type: named
+      dns_zones:
         type: named
     variables:
       LOG_LEVEL: warn

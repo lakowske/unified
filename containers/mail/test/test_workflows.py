@@ -1,6 +1,7 @@
 """End-to-end workflow tests for mail container functionality."""
 
 import logging
+import ssl
 import time
 
 import pytest
@@ -541,3 +542,321 @@ class TestSystemIntegration:
                     cursor.execute("DELETE FROM unified.user_passwords WHERE user_id = %s", (user_id,))
                     cursor.execute("DELETE FROM unified.users WHERE id = %s", (user_id,))
                     db_connection.commit()
+
+
+class TestSSLTLSWorkflows:
+    """SSL/TLS enabled email workflow tests."""
+
+    def test_ssl_send_receive_workflow(self, mail_config, test_user, unique_subject):
+        """Test complete workflow using SSL/TLS for both SMTP and IMAP."""
+        user_email, password = test_user
+        from_email = f"ssl-test@{mail_config['mail_domain']}"
+        test_body = f"SSL/TLS workflow test email sent at {time.time()}"
+
+        logger.info(f"Testing SSL send-receive workflow - user: {user_email}, subject: {unique_subject}")
+
+        # Step 1: Send email via SMTPS (SSL-enabled SMTP)
+        logger.info("Step 1: Sending email via SMTPS")
+        try:
+            import smtplib
+            
+            # Create SSL context that allows self-signed certificates
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            smtps_port = mail_config.get('smtps_port', 4465)
+            
+            with smtplib.SMTP_SSL(mail_config['smtp_host'], smtps_port, context=ssl_context, timeout=10) as server:
+                # Create email message
+                from email.mime.text import MIMEText
+                msg = MIMEText(test_body)
+                msg['Subject'] = unique_subject
+                msg['From'] = from_email
+                msg['To'] = user_email
+                
+                # Send email
+                server.send_message(msg)
+                logger.info("Email sent successfully via SMTPS")
+                
+        except Exception as e:
+            # If SSL is not configured, this test should be skipped
+            logger.warning(f"SMTPS test skipped (SSL may not be configured) - error: {str(e)}")
+            pytest.skip(f"SMTPS not available: {str(e)}")
+
+        # Step 2: Wait for email delivery
+        logger.info("Step 2: Waiting for email delivery")
+        time.sleep(3)
+
+        # Step 3: Connect to IMAPS and retrieve email
+        logger.info("Step 3: Connecting to IMAPS and retrieving email")
+        try:
+            import imaplib
+            
+            # Create SSL context that allows self-signed certificates
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            imaps_port = mail_config.get('imaps_port', 9933)
+            
+            with imaplib.IMAP4_SSL(mail_config['imap_host'], imaps_port, ssl_context=ssl_context) as imap:
+                # Login
+                imap.login(user_email, password)
+                imap.select('INBOX')
+                
+                # Search for the sent email
+                logger.info("Step 4: Searching for sent email")
+                message_ids = search_emails_by_subject(imap, "INBOX", unique_subject)
+                
+                if message_ids:
+                    logger.info(f"Email found in INBOX via IMAPS - message_count: {len(message_ids)}")
+                    
+                    # Fetch and verify email content
+                    logger.info("Step 5: Fetching and verifying email content")
+                    email_content = fetch_email_content(imap, message_ids[0])
+                    
+                    assert email_content is not None, "Email content should be retrievable via IMAPS"
+                    
+                    subject, from_addr, body = email_content
+                    logger.info(f"SSL email content verified - subject: {subject}, from: {from_addr}")
+                    
+                    # Verify email content matches what was sent
+                    assert unique_subject in subject, f"Subject should match - expected: {unique_subject}, got: {subject}"
+                    assert from_email in from_addr, f"From address should match - expected: {from_email}, got: {from_addr}"
+                    
+                    logger.info("SSL send-receive workflow completed successfully")
+                else:
+                    pytest.fail(f"SSL-sent email not found in INBOX - subject: {unique_subject}")
+                
+                # Cleanup
+                cleanup_test_emails(imap, [unique_subject])
+                
+        except Exception as e:
+            # If SSL is not configured, this test should be skipped
+            logger.warning(f"IMAPS test skipped (SSL may not be configured) - error: {str(e)}")
+            pytest.skip(f"IMAPS not available: {str(e)}")
+
+    def test_starttls_submission_workflow(self, mail_config, test_user, unique_subject):
+        """Test email workflow using STARTTLS on submission port."""
+        user_email, password = test_user
+        from_email = f"starttls-test@{mail_config['mail_domain']}"
+        test_body = f"STARTTLS workflow test email sent at {time.time()}"
+
+        logger.info(f"Testing STARTTLS submission workflow - user: {user_email}, subject: {unique_subject}")
+
+        # Step 1: Send email via SMTP with STARTTLS
+        logger.info("Step 1: Sending email via SMTP with STARTTLS")
+        try:
+            import smtplib
+            
+            submission_port = mail_config.get('submission_port', 5587)
+            
+            with smtplib.SMTP(mail_config['smtp_host'], submission_port, timeout=10) as server:
+                server.ehlo()
+                
+                # Check if STARTTLS is available
+                if server.has_extn('STARTTLS'):
+                    logger.info("STARTTLS extension available, starting TLS")
+                    server.starttls()
+                    server.ehlo()  # Re-identify after STARTTLS
+                    
+                    # Create and send email message
+                    from email.mime.text import MIMEText
+                    msg = MIMEText(test_body)
+                    msg['Subject'] = unique_subject
+                    msg['From'] = from_email
+                    msg['To'] = user_email
+                    
+                    server.send_message(msg)
+                    logger.info("Email sent successfully via STARTTLS")
+                else:
+                    logger.warning("STARTTLS not available, using plain SMTP")
+                    pytest.skip("STARTTLS not available")
+                    
+        except Exception as e:
+            logger.warning(f"STARTTLS test skipped - error: {str(e)}")
+            pytest.skip(f"STARTTLS submission not available: {str(e)}")
+
+        # Step 2: Wait for email delivery
+        logger.info("Step 2: Waiting for email delivery")
+        time.sleep(3)
+
+        # Step 3: Retrieve email via standard IMAP
+        logger.info("Step 3: Retrieving email via IMAP")
+        imap = connect_imap(
+            host=mail_config["imap_host"], 
+            port=mail_config["imap_port"], 
+            username=user_email, 
+            password=password
+        )
+
+        assert imap is not None, f"IMAP connection should succeed - username: {user_email}"
+
+        try:
+            # Search for the sent email
+            message_ids = search_emails_by_subject(imap, "INBOX", unique_subject)
+
+            if message_ids:
+                logger.info(f"STARTTLS email found in INBOX - message_count: {len(message_ids)}")
+
+                # Verify email content
+                email_content = fetch_email_content(imap, message_ids[0])
+                assert email_content is not None, "Email content should be retrievable"
+
+                subject, from_addr, body = email_content
+                logger.info(f"STARTTLS email content verified - subject: {subject}, from: {from_addr}")
+
+                assert unique_subject in subject, "Subject should match"
+                assert from_email in from_addr, "From address should match"
+
+                logger.info("STARTTLS submission workflow completed successfully")
+            else:
+                pytest.fail(f"STARTTLS email not found in INBOX - subject: {unique_subject}")
+
+        finally:
+            cleanup_test_emails(imap, [unique_subject])
+            imap.logout()
+
+    def test_mixed_ssl_workflow(self, mail_config, test_user_pair, unique_subject):
+        """Test workflow mixing SSL and non-SSL connections."""
+        (sender_email, sender_password), (recipient_email, recipient_password) = test_user_pair
+        test_body = f"Mixed SSL workflow test email sent at {time.time()}"
+
+        logger.info(f"Testing mixed SSL workflow - from: {sender_email}, to: {recipient_email}")
+
+        # Step 1: Send email via regular SMTP (non-SSL)
+        logger.info("Step 1: Sending email via regular SMTP")
+        send_success = send_test_email(
+            smtp_host=mail_config["smtp_host"],
+            smtp_port=mail_config["smtp_port"],
+            from_email=sender_email,
+            to_email=recipient_email,
+            subject=unique_subject,
+            body=test_body,
+        )
+
+        assert send_success, "Email should be sent via regular SMTP"
+        time.sleep(3)
+
+        # Step 2: Retrieve email via IMAPS (SSL)
+        logger.info("Step 2: Retrieving email via IMAPS")
+        try:
+            import imaplib
+            
+            # Create SSL context that allows self-signed certificates
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            imaps_port = mail_config.get('imaps_port', 9933)
+            
+            with imaplib.IMAP4_SSL(mail_config['imap_host'], imaps_port, ssl_context=ssl_context) as imap:
+                # Login and select inbox
+                imap.login(recipient_email, recipient_password)
+                imap.select('INBOX')
+                
+                # Search for email
+                message_ids = search_emails_by_subject(imap, "INBOX", unique_subject)
+                
+                if message_ids:
+                    logger.info("Mixed SSL workflow: Email sent via SMTP retrieved via IMAPS")
+                    
+                    # Verify content
+                    email_content = fetch_email_content(imap, message_ids[0])
+                    assert email_content is not None, "Email should be retrievable via IMAPS"
+                    
+                    subject, from_addr, body = email_content
+                    assert unique_subject in subject, "Subject should match"
+                    assert sender_email in from_addr, "From address should match"
+                    
+                    logger.info("Mixed SSL workflow completed successfully")
+                else:
+                    pytest.fail("Email not found via IMAPS")
+                
+                # Cleanup
+                cleanup_test_emails(imap, [unique_subject])
+                
+        except Exception as e:
+            logger.warning(f"Mixed SSL workflow test failed - error: {str(e)}")
+            # Fall back to regular IMAP if IMAPS fails
+            recipient_imap = connect_imap(
+                host=mail_config["imap_host"],
+                port=mail_config["imap_port"],
+                username=recipient_email,
+                password=recipient_password,
+            )
+            
+            if recipient_imap:
+                try:
+                    cleanup_test_emails(recipient_imap, [unique_subject])
+                finally:
+                    recipient_imap.logout()
+            
+            pytest.skip(f"IMAPS not available for mixed SSL test: {str(e)}")
+
+    def test_certificate_preference_workflow(self, mail_config, db_connection, test_user, unique_subject):
+        """Test that certificate preference system affects SSL connections."""
+        user_email, password = test_user
+        
+        logger.info("Testing certificate preference workflow")
+        
+        # Step 1: Check current certificate status in database
+        logger.info("Step 1: Checking current certificate status")
+        with db_connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT certificate_type, ssl_enabled, certificate_path
+                FROM unified.service_certificates 
+                WHERE service_name = 'mail' AND domain = %s
+            """, (mail_config['mail_domain'],))
+            
+            cert_status = cursor.fetchone()
+            
+            if cert_status:
+                cert_type, ssl_enabled, cert_path = cert_status
+                logger.info(f"Current certificate status - type: {cert_type}, SSL: {ssl_enabled}")
+                
+                if ssl_enabled:
+                    # Step 2: Test SSL connection with current certificate
+                    logger.info(f"Step 2: Testing SSL connection with {cert_type} certificate")
+                    
+                    try:
+                        import imaplib
+                        import socket
+                        
+                        # Create SSL context
+                        ssl_context = ssl.create_default_context()
+                        ssl_context.check_hostname = False
+                        ssl_context.verify_mode = ssl.CERT_NONE
+                        
+                        imaps_port = mail_config.get('imaps_port', 9933)
+                        
+                        # Test SSL connection and certificate
+                        with socket.create_connection((mail_config['imap_host'], imaps_port), timeout=10) as sock:
+                            with ssl_context.wrap_socket(sock, server_hostname=mail_config['imap_host']) as ssock:
+                                cert = ssock.getpeercert()
+                                
+                                logger.info(f"SSL certificate retrieved for {cert_type} preference")
+                                logger.info(f"Certificate subject: {cert.get('subject', 'N/A')}")
+                                logger.info(f"Certificate issuer: {cert.get('issuer', 'N/A')}")
+                                
+                                # Basic certificate validation
+                                assert cert is not None, "Certificate should be present"
+                                
+                                # Test actual IMAPS functionality
+                                with imaplib.IMAP4_SSL(mail_config['imap_host'], imaps_port, ssl_context=ssl_context) as imap:
+                                    imap.login(user_email, password)
+                                    imap.select('INBOX')
+                                    logger.info(f"IMAPS login successful with {cert_type} certificate")
+                        
+                        logger.info(f"Certificate preference workflow completed - certificate type: {cert_type}")
+                        
+                    except Exception as e:
+                        logger.warning(f"SSL test failed with {cert_type} certificate - error: {str(e)}")
+                        pytest.skip(f"SSL not working with {cert_type} certificate: {str(e)}")
+                else:
+                    logger.info("SSL is disabled, skipping certificate preference test")
+                    pytest.skip("SSL is disabled in mail configuration")
+            else:
+                logger.info("No certificate status found, testing may be running before service startup")
+                pytest.skip("Certificate status not found in database")

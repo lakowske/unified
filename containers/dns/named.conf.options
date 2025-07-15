@@ -1,0 +1,40 @@
+options {
+    directory "/var/cache/bind";
+
+    // Simple relay configuration - forward to upstream DNS
+    forwarders {
+        8.8.8.8;
+        8.8.4.4;
+        1.1.1.1;
+        1.0.0.1;
+    };
+
+    // DNS server behavior
+    forward only;
+    dnssec-validation no;
+
+    // Allow queries from any host (can be restricted later)
+    allow-query { any; };
+
+    // Listen on all interfaces
+    listen-on port 53 { any; };
+    listen-on-v6 port 53 { any; };
+
+    // Basic security settings
+    recursion yes;
+    allow-recursion { any; };
+
+    // Performance settings
+    max-cache-size 100m;
+    max-cache-ttl 3600;
+
+    // Response policy zone settings removed - not needed for mail DNS setup
+
+    // Minimal responses to reduce packet size
+    minimal-responses yes;
+
+    // Version information hiding
+    version none;
+    hostname none;
+    server-id none;
+};

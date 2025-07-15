@@ -1,0 +1,21 @@
+// Local zone configuration
+// This file is for local zones that this server will be authoritative for
+
+// Authoritative zone for mail domain
+zone "${MAIL_DOMAIN}" {
+    type master;
+    file "/data/zones/${MAIL_DOMAIN}.zone";
+    allow-update { none; };
+    allow-query { any; };
+    allow-transfer { none; };
+};
+
+// Reverse lookup zones can be added here as needed
+// Example:
+/*
+zone "1.168.192.in-addr.arpa" {
+    type master;
+    file "/data/zones/192.168.1.rev";
+    allow-update { none; };
+};
+*/

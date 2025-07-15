@@ -59,14 +59,16 @@ if [ $attempt -eq $max_attempts ]; then
     exit 1
 fi
 
-# Process Dovecot configuration templates
-echo "Processing Dovecot configuration..."
-envsubst < /etc/dovecot/dovecot.conf.template > /etc/dovecot/dovecot.conf
+# Configure SSL/TLS certificates with preference logic
+echo "Configuring SSL/TLS certificates..."
+/usr/local/bin/configure-ssl.sh
+
+# Process Dovecot configuration templates (SSL configuration handled by configure-ssl.sh)
+echo "Processing Dovecot SQL configuration..."
 envsubst < /etc/dovecot/dovecot-sql.conf.template > /etc/dovecot/dovecot-sql.conf.ext
 
-# Process Postfix configuration templates
-echo "Processing Postfix configuration..."
-envsubst < /etc/postfix/main.cf.template > /etc/postfix/main.cf
+# Process Postfix master configuration template (main.cf handled by configure-ssl.sh)
+echo "Processing Postfix master configuration..."
 envsubst < /etc/postfix/master.cf.template > /etc/postfix/master.cf
 
 # Create Postfix SQL query files for PostgreSQL lookups
@@ -79,6 +81,10 @@ password = ${DB_PASSWORD}
 hosts = ${DB_HOST}:${DB_PORT}
 dbname = ${DB_NAME}
 query = SELECT DISTINCT domain FROM unified.users WHERE domain='%s' AND is_active=true
+# Connection pooling and timeout settings
+connection_limit = 5
+expansion_limit = 100
+timeout = 30
 EOF
 
 # Virtual mailbox users lookup
@@ -87,7 +93,11 @@ user = ${DB_USER}
 password = ${DB_PASSWORD}
 hosts = ${DB_HOST}:${DB_PORT}
 dbname = ${DB_NAME}
-query = SELECT 1 FROM unified.users WHERE email='%s' AND is_active=true
+query = SELECT CONCAT(domain, '/', username, '/') FROM unified.users WHERE email='%s' AND is_active=true
+# Connection pooling and timeout settings
+connection_limit = 5
+expansion_limit = 100
+timeout = 30
 EOF
 
 # Virtual alias maps lookup
@@ -97,6 +107,10 @@ password = ${DB_PASSWORD}
 hosts = ${DB_HOST}:${DB_PORT}
 dbname = ${DB_NAME}
 query = SELECT u.email FROM unified.email_aliases ea JOIN unified.users u ON ea.user_id = u.id WHERE ea.alias_email='%s' AND ea.is_active=true AND u.is_active=true
+# Connection pooling and timeout settings
+connection_limit = 5
+expansion_limit = 100
+timeout = 30
 EOF
 
 # Set proper permissions for Postfix SQL configs
@@ -150,7 +164,44 @@ stderr_logfile=/data/logs/mail/mailbox_listener_error.log
 stdout_logfile=/data/logs/mail/mailbox_listener.log
 user=root
 environment=DB_HOST="%(ENV_DB_HOST)s",DB_PORT="%(ENV_DB_PORT)s",DB_NAME="%(ENV_DB_NAME)s",DB_USER="%(ENV_DB_USER)s",DB_PASSWORD="%(ENV_DB_PASSWORD)s",VMAIL_UID="%(ENV_VMAIL_UID)s",VMAIL_GID="%(ENV_VMAIL_GID)s"
+
+[program:certificate-watcher]
+command=/data/.venv/bin/python /usr/local/bin/certificate-watcher.py
+autostart=true
+autorestart=true
+stderr_logfile=/data/logs/mail/certificate_watcher_error.log
+stdout_logfile=/data/logs/mail/certificate_watcher.log
+user=root
+environment=DB_HOST="%(ENV_DB_HOST)s",DB_PORT="%(ENV_DB_PORT)s",DB_NAME="%(ENV_DB_NAME)s",DB_USER="%(ENV_DB_USER)s",DB_PASSWORD="%(ENV_DB_PASSWORD)s",MAIL_DOMAIN="%(ENV_MAIL_DOMAIN)s",SSL_ENABLED="%(ENV_SSL_ENABLED)s",CERT_TYPE_PREFERENCE="%(ENV_CERT_TYPE_PREFERENCE)s"
+
+[program:opendkim]
+command=/usr/sbin/opendkim -f
+autostart=true
+autorestart=true
+stderr_logfile=/data/logs/mail/opendkim_error.log
+stdout_logfile=/data/logs/mail/opendkim.log
+user=opendkim
 EOF
+
+# Configure OpenDKIM
+echo "Configuring OpenDKIM for domain: $MAIL_DOMAIN"
+/usr/local/bin/generate-dkim-keys.sh
+
+# Create OpenDKIM configuration directory
+mkdir -p /etc/opendkim
+
+# Process OpenDKIM configuration templates
+envsubst < /usr/local/bin/opendkim/opendkim.conf.template > /etc/opendkim/opendkim.conf
+envsubst < /usr/local/bin/opendkim/key.table.template > /etc/opendkim/key.table
+envsubst < /usr/local/bin/opendkim/signing.table.template > /etc/opendkim/signing.table
+envsubst < /usr/local/bin/opendkim/trusted.hosts.template > /etc/opendkim/trusted.hosts
+
+# Create OpenDKIM runtime directory
+mkdir -p /var/run/opendkim
+chown opendkim:opendkim /var/run/opendkim
+
+# Set proper permissions on OpenDKIM configuration
+chown -R opendkim:opendkim /etc/opendkim
 
 echo "Mail server configuration complete."
 echo "Starting Dovecot and Postfix services..."

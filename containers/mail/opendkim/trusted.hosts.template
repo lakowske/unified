@@ -1,0 +1,14 @@
+# OpenDKIM Trusted Hosts
+# Hosts that are allowed to sign mail for this domain
+
+127.0.0.1
+::1
+localhost
+localhost.localdomain
+${MAIL_DOMAIN}
+.${MAIL_DOMAIN}
+
+# Add any additional trusted hosts here
+# Example:
+# 192.168.1.0/24
+# mail.example.com

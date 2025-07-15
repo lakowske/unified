@@ -1,0 +1,41 @@
+# OpenDKIM Configuration for ${MAIL_DOMAIN}
+# This configuration enables DKIM signing for outgoing mail
+
+# Basic settings
+Syslog                  yes
+SyslogSuccess           yes
+LogWhy                  yes
+Canonicalization        relaxed/simple
+Mode                    sv
+SubDomains              no
+AutoRestart             yes
+AutoRestartRate         10/1M
+Background              yes
+DNSTimeout              5
+SignatureAlgorithm      rsa-sha256
+
+# Network settings
+Socket                  inet:8891@localhost
+PidFile                 /var/run/opendkim/opendkim.pid
+
+# User/Group settings
+UserID                  opendkim:opendkim
+UMask                   002
+
+# Domain and key settings
+Domain                  ${MAIL_DOMAIN}
+KeyFile                 /etc/opendkim/keys/${MAIL_DOMAIN}/mail.private
+Selector                mail
+
+# Signing settings
+KeyTable                /etc/opendkim/key.table
+SigningTable            /etc/opendkim/signing.table
+ExternalIgnoreList      /etc/opendkim/trusted.hosts
+InternalHosts           /etc/opendkim/trusted.hosts
+
+# Security settings
+RequireSafeKeys         no
+TrustAnchorFile         /usr/share/dns/root.key
+
+# Logging
+SyslogFacility          mail

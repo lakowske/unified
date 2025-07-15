@@ -5,7 +5,7 @@
 # ==========================================================================
 
 # SMTP service on port 25
-smtp      inet  n       -       y       -       -       smtpd
+smtp      inet  n       -       y       -       -       smtpd -v
 
 # Local mail pickup
 pickup    unix  n       -       y       60      1       pickup
@@ -28,7 +28,7 @@ proxymap  unix  -       -       n       -       -       proxymap
 proxywrite unix -       -       n       -       1       proxymap
 
 # Virtual delivery (for virtual mailboxes)
-virtual   unix  -       n       n       -       -       virtual
+virtual   unix  -       n       n       -       -       virtual -v
 
 # Local delivery
 local     unix  -       n       n       -       -       local
@@ -41,11 +41,20 @@ lmtp      unix  -       -       y       -       -       lmtp
 anvil     unix  -       -       y       -       1       anvil
 scache    unix  -       -       y       -       1       scache
 
-# Mail submission (optional, for authenticated users)
-# submission inet n       -       y       -       -       smtpd
-#   -o syslog_name=postfix/submission
-#   -o smtpd_tls_security_level=encrypt
-#   -o smtpd_sasl_auth_enable=yes
-#   -o smtpd_reject_unlisted_recipient=no
-#   -o smtpd_client_restrictions=permit_sasl_authenticated,reject
-#   -o milter_macro_daemon_name=ORIGINATING
+# Mail submission (port 587 with STARTTLS)
+submission inet n       -       y       -       -       smtpd
+  -o syslog_name=postfix/submission
+  -o smtpd_tls_security_level=encrypt
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_reject_unlisted_recipient=no
+  -o smtpd_client_restrictions=permit_sasl_authenticated,reject
+  -o milter_macro_daemon_name=ORIGINATING
+
+# SMTPS (port 465 with SSL/TLS)
+smtps     inet  n       -       y       -       -       smtpd
+  -o syslog_name=postfix/smtps
+  -o smtpd_tls_wrappermode=yes
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_reject_unlisted_recipient=no
+  -o smtpd_client_restrictions=permit_sasl_authenticated,reject
+  -o milter_macro_daemon_name=ORIGINATING

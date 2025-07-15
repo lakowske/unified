@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Postfix SMTP server
     postfix \
     postfix-pgsql \
+    # OpenDKIM for email signing
+    opendkim \
+    opendkim-tools \
     # PostgreSQL client for authentication
     postgresql-client-15 \
     # Mail utilities
@@ -60,6 +63,16 @@ COPY containers/mail/postfix/master.cf.template /etc/postfix/master.cf.template
 # Copy management scripts
 COPY containers/mail/scripts/ /usr/local/bin/mail-scripts/
 RUN chmod +x /usr/local/bin/mail-scripts/*.sh
+
+# Copy SSL configuration and certificate watcher
+COPY containers/mail/configure-ssl.sh /usr/local/bin/configure-ssl.sh
+COPY containers/mail/certificate-watcher.py /usr/local/bin/certificate-watcher.py
+COPY containers/mail/reload-ssl.sh /usr/local/bin/reload-ssl.sh
+COPY containers/mail/generate-dkim-keys.sh /usr/local/bin/generate-dkim-keys.sh
+RUN chmod +x /usr/local/bin/configure-ssl.sh /usr/local/bin/certificate-watcher.py /usr/local/bin/reload-ssl.sh /usr/local/bin/generate-dkim-keys.sh
+
+# Copy OpenDKIM configuration templates
+COPY containers/mail/opendkim/ /usr/local/bin/opendkim/
 
 # Copy entrypoint script
 COPY containers/mail/entrypoint.sh /entrypoint.sh
