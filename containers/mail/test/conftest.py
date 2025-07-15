@@ -22,10 +22,17 @@ def mail_config():
     """Configuration for mail server connection."""
     return {
         "smtp_host": os.getenv("MAIL_SMTP_HOST", "localhost"),
-        "smtp_port": int(os.getenv("MAIL_SMTP_PORT", "2525")),
+        "smtp_port": int(os.getenv("MAIL_SMTP_PORT", "25")),
         "imap_host": os.getenv("MAIL_IMAP_HOST", "localhost"),
-        "imap_port": int(os.getenv("MAIL_IMAP_PORT", "1144")),
-        "mail_domain": os.getenv("MAIL_DOMAIN", "localhost"),
+        "imap_port": int(os.getenv("MAIL_IMAP_PORT", "143")),
+        "mail_domain": os.getenv("MAIL_DOMAIN", "lab.sethlakowske.com"),
+        # SSL/TLS ports (using standard ports with host networking)
+        "imaps_port": int(os.getenv("MAIL_IMAPS_PORT", "993")),
+        "smtps_port": int(os.getenv("MAIL_SMTPS_PORT", "465")),
+        "submission_port": int(os.getenv("MAIL_SUBMISSION_PORT", "587")),
+        # SSL configuration
+        "ssl_enabled": os.getenv("SSL_ENABLED", "false").lower() == "true",
+        "cert_type_preference": os.getenv("CERT_TYPE_PREFERENCE", ""),
     }
 
 
@@ -34,10 +41,10 @@ def db_config():
     """Configuration for PostgreSQL database connection."""
     return {
         "host": os.getenv("DB_HOST", "localhost"),
-        "port": int(os.getenv("DB_PORT", "5432")),
+        "port": int(os.getenv("DB_PORT", "5436")),
         "database": os.getenv("DB_NAME", "unified"),
         "user": os.getenv("DB_USER", "unified_user"),
-        "password": os.getenv("DB_PASSWORD", ""),
+        "password": os.getenv("DB_PASSWORD", "unified_password"),
         "sslmode": os.getenv("DB_SSLMODE", "prefer"),
     }
 

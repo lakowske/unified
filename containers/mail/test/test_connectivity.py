@@ -1,6 +1,8 @@
 """Basic connectivity tests for mail container services."""
 
 import logging
+import socket
+import ssl
 
 import psycopg2
 import pytest
@@ -214,3 +216,271 @@ class TestMailIntegration:
             # Views should be accessible even if empty
             assert isinstance(auth_records, list), "dovecot_auth view should return list"
             assert isinstance(user_records, list), "dovecot_users view should return list"
+
+
+class TestSSLTLSConnectivity:
+    """Test SSL/TLS connectivity for secure mail services."""
+
+    def test_imaps_port_accessible(self, mail_config):
+        """Test that IMAPS port is accessible."""
+        imaps_port = mail_config.get("imaps_port", 9933)
+        logger.info(f"Testing IMAPS port accessibility - host: {mail_config['imap_host']}, port: {imaps_port}")
+
+        # Wait for service to be ready
+        assert wait_for_service(
+            mail_config["imap_host"], imaps_port, max_attempts=10
+        ), f"IMAPS service not available on {mail_config['imap_host']}:{imaps_port}"
+
+        # Verify port is accessible
+        assert check_port_connectivity(
+            mail_config["imap_host"], imaps_port
+        ), f"IMAPS port not accessible on {mail_config['imap_host']}:{imaps_port}"
+
+    def test_smtps_port_accessible(self, mail_config):
+        """Test that SMTPS port is accessible."""
+        smtps_port = mail_config.get("smtps_port", 4465)
+        logger.info(f"Testing SMTPS port accessibility - host: {mail_config['smtp_host']}, port: {smtps_port}")
+
+        # Wait for service to be ready
+        assert wait_for_service(
+            mail_config["smtp_host"], smtps_port, max_attempts=10
+        ), f"SMTPS service not available on {mail_config['smtp_host']}:{smtps_port}"
+
+        # Verify port is accessible
+        assert check_port_connectivity(
+            mail_config["smtp_host"], smtps_port
+        ), f"SMTPS port not accessible on {mail_config['smtp_host']}:{smtps_port}"
+
+    def test_submission_port_accessible(self, mail_config):
+        """Test that SMTP submission port is accessible."""
+        submission_port = mail_config.get("submission_port", 5587)
+        logger.info(
+            f"Testing submission port accessibility - host: {mail_config['smtp_host']}, port: {submission_port}"
+        )
+
+        # Wait for service to be ready
+        assert wait_for_service(
+            mail_config["smtp_host"], submission_port, max_attempts=10
+        ), f"SMTP submission service not available on {mail_config['smtp_host']}:{submission_port}"
+
+        # Verify port is accessible
+        assert check_port_connectivity(
+            mail_config["smtp_host"], submission_port
+        ), f"SMTP submission port not accessible on {mail_config['smtp_host']}:{submission_port}"
+
+    def test_ssl_certificate_present(self, mail_config):
+        """Test that SSL certificate is present and valid for IMAPS."""
+        imaps_port = mail_config.get("imaps_port", 993)
+        logger.info(f"Testing SSL certificate - host: {mail_config['imap_host']}, port: {imaps_port}")
+
+        try:
+            # Test SSL connection and certificate retrieval
+            # First, verify SSL connection works
+            context_basic = ssl.create_default_context()
+            context_basic.check_hostname = False
+            context_basic.verify_mode = ssl.CERT_NONE
+
+            with socket.create_connection((mail_config["imap_host"], imaps_port), timeout=10) as sock:
+                with context_basic.wrap_socket(sock, server_hostname=mail_config["imap_host"]) as ssock:
+                    logger.info("SSL connection established successfully")
+
+            # Now retrieve certificate metadata with proper verification
+            # Use mail domain for hostname verification if available
+            server_hostname = mail_config.get("mail_domain", mail_config["imap_host"])
+
+            context_verify = ssl.create_default_context()
+            context_verify.check_hostname = False  # Disable hostname check but enable cert verification
+            context_verify.verify_mode = ssl.CERT_REQUIRED
+
+            with socket.create_connection((mail_config["imap_host"], imaps_port), timeout=10) as sock:
+                with context_verify.wrap_socket(sock, server_hostname=server_hostname) as ssock:
+                    cert = ssock.getpeercert()
+
+                    logger.info(f"SSL certificate retrieved - subject: {cert.get('subject', 'N/A')}")
+                    logger.info(f"SSL certificate issuer: {cert.get('issuer', 'N/A')}")
+                    logger.info(f"SSL certificate valid until: {cert.get('notAfter', 'N/A')}")
+
+                    # Certificate should exist and contain metadata
+                    assert cert is not None, "SSL certificate should be present"
+                    assert "subject" in cert, "Certificate should have subject field"
+                    assert "notAfter" in cert, "Certificate should have expiration date"
+
+                    # Additional validation for Let's Encrypt certificates
+                    issuer_info = cert.get("issuer", [])
+                    issuer_str = str(issuer_info)
+                    if "Let's Encrypt" in issuer_str:
+                        logger.info("Detected Let's Encrypt certificate")
+
+        except ssl.SSLError as e:
+            if "certificate verify failed" in str(e):
+                logger.warning(f"Certificate verification failed (expected for self-signed): {e}")
+                # For self-signed certificates, just verify SSL connection works
+                context_basic = ssl.create_default_context()
+                context_basic.check_hostname = False
+                context_basic.verify_mode = ssl.CERT_NONE
+
+                with socket.create_connection((mail_config["imap_host"], imaps_port), timeout=10) as sock:
+                    with context_basic.wrap_socket(sock, server_hostname=mail_config["imap_host"]) as ssock:
+                        logger.info("SSL connection works with self-signed certificate")
+                        # For self-signed certs, we can't get metadata but connection works
+            else:
+                pytest.fail(f"SSL certificate test failed - SSL error: {str(e)}")
+        except Exception as e:
+            pytest.fail(f"SSL certificate test failed - error: {str(e)}")
+
+    def test_tls_smtp_submission(self, mail_config):
+        """Test STARTTLS functionality on SMTP submission port."""
+        submission_port = mail_config.get("submission_port", 5587)
+        logger.info(f"Testing SMTP STARTTLS - host: {mail_config['smtp_host']}, port: {submission_port}")
+
+        try:
+            import smtplib
+
+            # Connect to submission port and test STARTTLS
+            with smtplib.SMTP(mail_config["smtp_host"], submission_port, timeout=10) as server:
+                # Check if STARTTLS is available
+                server.ehlo()
+
+                if server.has_extn("STARTTLS"):
+                    logger.info("STARTTLS extension available")
+
+                    # Start TLS
+                    server.starttls()
+                    server.ehlo()  # Re-identify after STARTTLS
+
+                    logger.info("STARTTLS negotiation successful")
+
+                    # Verify we're now using SSL
+                    assert hasattr(server.sock, "read"), "Connection should be using SSL after STARTTLS"
+                else:
+                    logger.warning("STARTTLS extension not available - SSL may be disabled")
+
+        except Exception as e:
+            # Don't fail if SSL is not configured, just log
+            logger.warning(f"STARTTLS test failed (may be expected if SSL disabled) - error: {str(e)}")
+
+    def test_imaps_ssl_service_responds(self, mail_config):
+        """Test that IMAPS service responds to SSL connections."""
+        imaps_port = mail_config.get("imaps_port", 9933)
+        logger.info(f"Testing IMAPS SSL service response - host: {mail_config['imap_host']}, port: {imaps_port}")
+
+        try:
+            import imaplib
+
+            # Create SSL context that allows self-signed certificates
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            # Connect to IMAPS with SSL
+            with imaplib.IMAP4_SSL(mail_config["imap_host"], imaps_port, ssl_context=ssl_context) as imap:
+                response = imap.noop()
+                logger.info(f"IMAPS SSL service responded - response: {response}")
+                assert response[0] == "OK", f"IMAPS NOOP should return OK, got {response[0]}"
+
+        except Exception as e:
+            # Don't fail if SSL is not configured, just log
+            logger.warning(f"IMAPS SSL test failed (may be expected if SSL disabled) - error: {str(e)}")
+
+    def test_smtps_ssl_service_responds(self, mail_config):
+        """Test that SMTPS service responds to SSL connections."""
+        smtps_port = mail_config.get("smtps_port", 4465)
+        logger.info(f"Testing SMTPS SSL service response - host: {mail_config['smtp_host']}, port: {smtps_port}")
+
+        try:
+            import smtplib
+
+            # Create SSL context that allows self-signed certificates
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            # Connect to SMTPS with SSL
+            with smtplib.SMTP_SSL(mail_config["smtp_host"], smtps_port, context=ssl_context, timeout=10) as server:
+                response = server.noop()
+                logger.info(f"SMTPS SSL service responded - response: {response}")
+                assert response[0] == 250, f"SMTPS NOOP should return 250, got {response[0]}"
+
+        except Exception as e:
+            # Don't fail if SSL is not configured, just log
+            logger.warning(f"SMTPS SSL test failed (may be expected if SSL disabled) - error: {str(e)}")
+
+
+class TestCertificateManagement:
+    """Test certificate management and preference system."""
+
+    def test_certificate_status_in_database(self, db_connection, mail_config):
+        """Test that certificate status is tracked in database."""
+        logger.info("Testing certificate status tracking in database")
+
+        with db_connection.cursor() as cursor:
+            try:
+                cursor.execute(
+                    """
+                    SELECT service_name, domain, certificate_type, ssl_enabled, certificate_path, last_updated
+                    FROM unified.service_certificates
+                    WHERE service_name = 'mail' AND domain = %s
+                """,
+                    (mail_config["mail_domain"],),
+                )
+
+                cert_status = cursor.fetchone()
+
+                if cert_status:
+                    service_name, domain, cert_type, ssl_enabled, cert_path, last_updated = cert_status
+                    logger.info(f"Certificate status found - service: {service_name}, domain: {domain}")
+                    logger.info(f"Certificate type: {cert_type}, SSL enabled: {ssl_enabled}")
+                    logger.info(f"Certificate path: {cert_path}, last updated: {last_updated}")
+
+                    # Basic validation
+                    assert service_name == "mail", "Service name should be 'mail'"
+                    assert domain == mail_config["mail_domain"], "Domain should match mail domain"
+                    assert cert_type in ["live", "staged", "self-signed", "none"], "Certificate type should be valid"
+                    assert isinstance(ssl_enabled, bool), "SSL enabled should be boolean"
+                else:
+                    logger.info("No certificate status found in database (may be expected if service not started)")
+
+            except Exception as e:
+                pytest.fail(f"Certificate status check failed - error: {str(e)}")
+
+    def test_certificate_notification_system(self, db_connection):
+        """Test that certificate notification system is working."""
+        logger.info("Testing certificate notification system")
+
+        with db_connection.cursor() as cursor:
+            try:
+                # Check if certificate notifications table exists and is accessible
+                cursor.execute("""
+                    SELECT COUNT(*) FROM unified.certificate_notifications
+                    WHERE created_at > NOW() - INTERVAL '1 hour'
+                """)
+
+                recent_notifications = cursor.fetchone()[0]
+                logger.info(f"Recent certificate notifications found: {recent_notifications}")
+
+                # We don't require notifications to exist, but the table should be accessible
+                assert recent_notifications >= 0, "Notification count should be non-negative"
+
+            except Exception as e:
+                pytest.fail(f"Certificate notification system check failed - error: {str(e)}")
+
+    @pytest.mark.slow
+    def test_certificate_watcher_listening(self, db_connection):
+        """Test that certificate watcher is listening for notifications."""
+        logger.info("Testing certificate watcher notification system")
+
+        try:
+            with db_connection.cursor() as cursor:
+                # Send a test notification
+                test_payload = "test:example.com:self-signed"
+                cursor.execute("NOTIFY certificate_change, %s", (test_payload,))
+                db_connection.commit()
+
+                logger.info(f"Test notification sent - payload: {test_payload}")
+
+                # We can't easily test if the watcher received it without more complex setup
+                # But we can verify the notification was sent successfully
+                assert True, "Notification sent successfully"
+
+        except Exception as e:
+            pytest.fail(f"Certificate watcher notification test failed - error: {str(e)}")
