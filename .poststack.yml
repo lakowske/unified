@@ -30,8 +30,8 @@ environments:
         depends_on: [postgres, volume-setup]
         variables:
           # Apache-specific variables
-          SERVER_NAME: dev.unified.local
-          SERVER_ADMIN: dev@unified.local
+          SERVER_NAME: lab.sethlakowske.com
+          SERVER_ADMIN: lakowske@gmail.com
           APACHE_LOG_LEVEL: debug
           # SSL configuration
           SSL_ENABLED: "true"
@@ -44,7 +44,7 @@ environments:
         depends_on: [postgres, volume-setup]
         variables:
           # Mail-specific variables
-          MAIL_DOMAIN: dev.unified.local
+          MAIL_DOMAIN: lab.sethlakowske.com
           MAIL_LOG_LEVEL: debug
           MAIL_SMTP_PORT: "2525"
           MAIL_IMAP_PORT: "1144"

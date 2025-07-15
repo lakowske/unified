@@ -23,7 +23,7 @@ enabled = false
 enabled = true
 
 [postfix]
-# Re-enable postfix monitoring (defined in jail.conf) 
+# Re-enable postfix monitoring (defined in jail.conf)
 enabled = true
 
 [postfix-rbl]

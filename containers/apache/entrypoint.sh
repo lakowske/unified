@@ -50,34 +50,46 @@ envsubst < /etc/apache2/sites-available/unified.conf.template > /etc/apache2/sit
 # SSL certificate setup and site configuration
 if [ "$SSL_ENABLED" = "true" ]; then
     echo "SSL enabled - configuring HTTPS virtual host..."
-    
+
     # Determine certificate paths based on certificate type and domain
     CERT_DIR="/data/certificates"
     CERT_DOMAIN="${APACHE_SERVER_NAME}"
-    
-    # Check for certificates in live directory first
+
+    # Certificate preference logic: live > staged > self-signed
+    # Check for live certificates first (Let's Encrypt production)
     if [ -f "$CERT_DIR/live/$CERT_DOMAIN/fullchain.pem" ] && [ -f "$CERT_DIR/live/$CERT_DOMAIN/privkey.pem" ]; then
-        echo "Found live certificates for $CERT_DOMAIN"
+        echo "Found live Let's Encrypt certificates for $CERT_DOMAIN"
         export SSL_CERT_PATH="$CERT_DIR/live/$CERT_DOMAIN/fullchain.pem"
         export SSL_KEY_PATH="$CERT_DIR/live/$CERT_DOMAIN/privkey.pem"
         export SSL_CHAIN_PATH="$CERT_DIR/live/$CERT_DOMAIN/chain.pem"
+        export CERT_TYPE_USED="live"
+    # Check for staged certificates second (Let's Encrypt staging)
+    elif [ -f "$CERT_DIR/staged/$CERT_DOMAIN/fullchain.pem" ] && [ -f "$CERT_DIR/staged/$CERT_DOMAIN/privkey.pem" ]; then
+        echo "Found staged Let's Encrypt certificates for $CERT_DOMAIN"
+        export SSL_CERT_PATH="$CERT_DIR/staged/$CERT_DOMAIN/fullchain.pem"
+        export SSL_KEY_PATH="$CERT_DIR/staged/$CERT_DOMAIN/privkey.pem"
+        export SSL_CHAIN_PATH="$CERT_DIR/staged/$CERT_DOMAIN/chain.pem"
+        export CERT_TYPE_USED="staged"
+    # Check for self-signed certificates third (fallback)
     elif [ -f "$CERT_DIR/self-signed/$CERT_DOMAIN/fullchain.pem" ] && [ -f "$CERT_DIR/self-signed/$CERT_DOMAIN/privkey.pem" ]; then
         echo "Found self-signed certificates for $CERT_DOMAIN"
         export SSL_CERT_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/fullchain.pem"
         export SSL_KEY_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/privkey.pem"
-        export SSL_CHAIN_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/fullchain.pem"
+        export SSL_CHAIN_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/chain.pem"
+        export CERT_TYPE_USED="self-signed"
     else
         echo "WARNING: No certificates found for $CERT_DOMAIN, generating self-signed certificate..."
-        
+
         # Use the certificate generation script
         if /usr/local/bin/generate-certificate.sh self-signed "$CERT_DOMAIN"; then
             echo "Certificate generated successfully, checking paths again..."
-            
-            # Check again for the generated certificate
-            if [ -f "$CERT_DIR/live/$CERT_DOMAIN/fullchain.pem" ] && [ -f "$CERT_DIR/live/$CERT_DOMAIN/privkey.pem" ]; then
-                export SSL_CERT_PATH="$CERT_DIR/live/$CERT_DOMAIN/fullchain.pem"
-                export SSL_KEY_PATH="$CERT_DIR/live/$CERT_DOMAIN/privkey.pem"
-                export SSL_CHAIN_PATH="$CERT_DIR/live/$CERT_DOMAIN/chain.pem"
+
+            # Check for the generated certificate in self-signed directory
+            if [ -f "$CERT_DIR/self-signed/$CERT_DOMAIN/fullchain.pem" ] && [ -f "$CERT_DIR/self-signed/$CERT_DOMAIN/privkey.pem" ]; then
+                export SSL_CERT_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/fullchain.pem"
+                export SSL_KEY_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/privkey.pem"
+                export SSL_CHAIN_PATH="$CERT_DIR/self-signed/$CERT_DOMAIN/chain.pem"
+                export CERT_TYPE_USED="self-signed"
                 echo "Self-signed certificate ready for $CERT_DOMAIN"
             else
                 echo "ERROR: Certificate generation reported success but files not found"
@@ -90,7 +102,7 @@ if [ "$SSL_ENABLED" = "true" ]; then
             echo "SSL disabled due to certificate generation failure"
         fi
     fi
-    
+
     # Only verify certificate files if SSL is still enabled
     if [ "$SSL_ENABLED" = "true" ]; then
         # Verify certificate files exist and are readable
@@ -101,23 +113,23 @@ if [ "$SSL_ENABLED" = "true" ]; then
             exit 1
         fi
     fi
-    
+
     if [ "$SSL_ENABLED" = "true" ]; then
-        echo "Using SSL certificates:"
+        echo "Using SSL certificates (type: $CERT_TYPE_USED):"
         echo "  Certificate: $SSL_CERT_PATH"
         echo "  Private Key: $SSL_KEY_PATH"
         echo "  Chain: $SSL_CHAIN_PATH"
-        
+
         # Process SSL virtual host template
         envsubst < /etc/apache2/sites-available/unified-ssl.conf.template > /etc/apache2/sites-available/unified-ssl.conf
-        
+
         # Enable SSL site and modules
         a2ensite unified-ssl
         a2enmod ssl
-        
+
         echo "SSL virtual host configured and enabled"
     fi
-    
+
     # Create ACME challenge directory for Let's Encrypt
     mkdir -p /var/www/acme-challenge
     chown www-data:www-data /var/www/acme-challenge

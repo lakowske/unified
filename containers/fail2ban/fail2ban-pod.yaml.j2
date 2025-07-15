@@ -90,7 +90,7 @@ spec:
       exec:
         command:
           - "/bin/sh"
-          - "-c" 
+          - "-c"
           - "fail2ban-client ping && test -S /var/run/fail2ban/fail2ban.sock"
       initialDelaySeconds: 10
       periodSeconds: 30

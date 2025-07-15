@@ -32,7 +32,7 @@ if [ -d "$CERT_DIR" ]; then
     CERT_DIRS=(
         "$CERT_DIR"
         "$CERT_DIR/live"
-        "$CERT_DIR/staged" 
+        "$CERT_DIR/staged"
         "$CERT_DIR/self-signed"
         "$CERT_DIR/archive"
         "$CERT_DIR/accounts"
@@ -71,26 +71,26 @@ fi
 # Set proper permissions on certificate directories with certgroup for shared access
 if [ -d "$CERT_DIR" ]; then
     echo "Setting permissions on $CERT_DIR with certgroup for secure certificate access..."
-    
+
     # Apache (www-data) should own the certificate directories since it will manage them
     # www-data UID is 33, certgroup GID is 9999
     chown -R 33:9999 "$CERT_DIR" || echo "Warning: Could not change certificate ownership to 33:9999 (www-data:certgroup)"
 
     # Set secure permissions for certificate directories
     chmod 755 "$CERT_DIR" || echo "Warning: Could not set certificate directory permissions"
-    
+
     # Set permissions for existing subdirectories
     for subdir in live staged self-signed archive renewal-hooks; do
         if [ -d "$CERT_DIR/$subdir" ]; then
             chmod 755 "$CERT_DIR/$subdir" || echo "Warning: Could not set $subdir directory permissions"
         fi
     done
-    
+
     # Special permissions for accounts directory (Let's Encrypt private keys)
     if [ -d "$CERT_DIR/accounts" ]; then
         chmod 700 "$CERT_DIR/accounts" || echo "Warning: Could not set accounts directory permissions"
     fi
-    
+
     echo "Certificate directory permissions set: www-data:certgroup with 755 permissions"
 fi
 

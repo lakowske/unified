@@ -11,22 +11,22 @@ CREATE TABLE unified.certificates (
     id SERIAL PRIMARY KEY,
     domain VARCHAR(255) NOT NULL,
     certificate_type VARCHAR(50) NOT NULL, -- 'self-signed', 'letsencrypt', 'manual'
-    
+
     -- Certificate metadata
     subject_alt_names TEXT[], -- Additional domains covered by this certificate
     issuer VARCHAR(500),
     subject VARCHAR(500),
-    
+
     -- Validity period
     not_before TIMESTAMP NOT NULL,
     not_after TIMESTAMP NOT NULL,
-    
+
     -- Certificate paths (relative to /data/certificates/)
     certificate_path VARCHAR(500) NOT NULL, -- e.g., 'live/example.com/cert.pem'
     private_key_path VARCHAR(500) NOT NULL, -- e.g., 'live/example.com/privkey.pem'
     chain_path VARCHAR(500), -- e.g., 'live/example.com/chain.pem'
     fullchain_path VARCHAR(500), -- e.g., 'live/example.com/fullchain.pem'
-    
+
     -- Status and renewal tracking
     is_active BOOLEAN DEFAULT true,
     auto_renew BOOLEAN DEFAULT true,
@@ -34,17 +34,17 @@ CREATE TABLE unified.certificates (
     last_renewal_attempt TIMESTAMP NULL,
     last_renewal_success TIMESTAMP NULL,
     renewal_error_message TEXT NULL,
-    
+
     -- Let's Encrypt specific
     acme_account_key_path VARCHAR(500) NULL,
     acme_staging BOOLEAN DEFAULT false,
     acme_challenge_type VARCHAR(50) DEFAULT 'http-01', -- 'http-01', 'dns-01'
-    
+
     -- Creation and update tracking
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INTEGER REFERENCES unified.users(id),
-    
+
     -- Constraints
     UNIQUE(domain, certificate_type),
     CHECK (certificate_type IN ('self-signed', 'letsencrypt', 'manual')),
@@ -56,18 +56,18 @@ CREATE TABLE unified.certificates (
 CREATE TABLE unified.certificate_files (
     id SERIAL PRIMARY KEY,
     certificate_id INTEGER REFERENCES unified.certificates(id) ON DELETE CASCADE,
-    
+
     -- File details
     file_type VARCHAR(50) NOT NULL, -- 'certificate', 'private_key', 'chain', 'fullchain'
     file_path VARCHAR(500) NOT NULL, -- Full path relative to /data/certificates/
     file_size BIGINT NOT NULL,
     file_checksum VARCHAR(64) NOT NULL, -- SHA256 checksum for integrity
     file_permissions VARCHAR(10) NOT NULL, -- e.g., '644', '600'
-    
+
     -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_verified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     UNIQUE(certificate_id, file_type),
     CHECK (file_type IN ('certificate', 'private_key', 'chain', 'fullchain')),
@@ -78,19 +78,19 @@ CREATE TABLE unified.certificate_files (
 CREATE TABLE unified.certificate_notifications (
     id SERIAL PRIMARY KEY,
     certificate_id INTEGER REFERENCES unified.certificates(id) ON DELETE CASCADE,
-    
+
     -- Notification details
     notification_type VARCHAR(50) NOT NULL, -- 'created', 'updated', 'renewed', 'expired', 'error'
     message TEXT,
     data JSONB, -- Additional structured data
-    
+
     -- Processing status
     processed_at TIMESTAMP NULL,
     processed_by VARCHAR(100) NULL, -- Service that processed the notification
-    
+
     -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     CHECK (notification_type IN ('created', 'updated', 'renewed', 'expired', 'error', 'deleted'))
 );
 
@@ -98,27 +98,27 @@ CREATE TABLE unified.certificate_notifications (
 CREATE TABLE unified.certificate_renewals (
     id SERIAL PRIMARY KEY,
     certificate_id INTEGER REFERENCES unified.certificates(id) ON DELETE CASCADE,
-    
+
     -- Renewal scheduling
     scheduled_at TIMESTAMP NOT NULL,
     started_at TIMESTAMP NULL,
     completed_at TIMESTAMP NULL,
-    
+
     -- Renewal details
     renewal_method VARCHAR(50) NOT NULL, -- 'automatic', 'manual', 'forced'
     success BOOLEAN NULL,
     error_message TEXT NULL,
-    
+
     -- Before/after certificate details
     old_not_after TIMESTAMP NULL,
     new_not_after TIMESTAMP NULL,
-    
+
     -- Renewal context
     triggered_by VARCHAR(100), -- 'cron', 'manual', 'api', 'expiration_check'
     renewal_logs TEXT,
-    
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     CHECK (renewal_method IN ('automatic', 'manual', 'forced'))
 );
 
@@ -128,7 +128,7 @@ CREATE TABLE unified.certificate_renewals (
 
 -- Active certificates with expiration status
 CREATE VIEW unified.certificate_status AS
-SELECT 
+SELECT
     c.id,
     c.domain,
     c.certificate_type,
@@ -140,33 +140,33 @@ SELECT
     c.auto_renew,
     c.last_renewal_success,
     c.renewal_error_message,
-    
+
     -- Expiration calculations
     (c.not_after - CURRENT_TIMESTAMP) AS time_until_expiry,
-    CASE 
+    CASE
         WHEN c.not_after < CURRENT_TIMESTAMP THEN 'expired'
         WHEN c.not_after < (CURRENT_TIMESTAMP + INTERVAL '7 days') THEN 'critical'
         WHEN c.not_after < (CURRENT_TIMESTAMP + INTERVAL '30 days') THEN 'warning'
         ELSE 'valid'
     END AS expiry_status,
-    
+
     -- File paths for easy access
     c.certificate_path,
     c.private_key_path,
     c.fullchain_path,
-    
+
     -- Renewal information
-    (SELECT COUNT(*) FROM unified.certificate_renewals cr 
-     WHERE cr.certificate_id = c.id AND cr.success = false 
+    (SELECT COUNT(*) FROM unified.certificate_renewals cr
+     WHERE cr.certificate_id = c.id AND cr.success = false
      AND cr.created_at > CURRENT_TIMESTAMP - INTERVAL '30 days') AS recent_failed_renewals
-     
+
 FROM unified.certificates c
 WHERE c.is_active = true
 ORDER BY c.not_after ASC;
 
 -- Certificate files with integrity status
 CREATE VIEW unified.certificate_file_status AS
-SELECT 
+SELECT
     c.domain,
     c.certificate_type,
     cf.file_type,
@@ -176,7 +176,7 @@ SELECT
     cf.file_permissions,
     cf.last_verified,
     (CURRENT_TIMESTAMP - cf.last_verified) AS time_since_verification,
-    CASE 
+    CASE
         WHEN cf.last_verified < (CURRENT_TIMESTAMP - INTERVAL '24 hours') THEN 'needs_verification'
         ELSE 'verified'
     END AS verification_status
@@ -219,7 +219,7 @@ BEGIN
     ELSIF TG_OP = 'DELETE' THEN
         notification_type = 'deleted';
     END IF;
-    
+
     -- Prepare notification data
     notification_data = jsonb_build_object(
         'certificate_id', COALESCE(NEW.id, OLD.id),
@@ -228,12 +228,12 @@ BEGIN
         'operation', TG_OP,
         'timestamp', CURRENT_TIMESTAMP
     );
-    
+
     -- Insert notification record
     INSERT INTO unified.certificate_notifications (
-        certificate_id, 
-        notification_type, 
-        message, 
+        certificate_id,
+        notification_type,
+        message,
         data
     ) VALUES (
         COALESCE(NEW.id, OLD.id),
@@ -241,10 +241,10 @@ BEGIN
         format('Certificate %s for domain %s', notification_type, COALESCE(NEW.domain, OLD.domain)),
         notification_data
     );
-    
+
     -- Send PostgreSQL notification
     PERFORM pg_notify('certificate_changes', notification_data::text);
-    
+
     RETURN COALESCE(NEW, OLD);
 END;
 $$ LANGUAGE plpgsql;
@@ -267,20 +267,20 @@ DECLARE
     cert_record RECORD;
     renewal_threshold INTEGER := 30; -- Start renewal process 30 days before expiration
 BEGIN
-    FOR cert_record IN 
+    FOR cert_record IN
         SELECT id, domain, not_after, auto_renew, certificate_type
-        FROM unified.certificates 
+        FROM unified.certificates
         WHERE is_active = true AND auto_renew = true
     LOOP
         -- Calculate days until expiration
         days_until_expiry := EXTRACT(days FROM (cert_record.not_after - CURRENT_TIMESTAMP));
-        
+
         -- Check if renewal is needed
         IF days_until_expiry <= renewal_threshold THEN
             -- Check if renewal is already scheduled
             IF NOT EXISTS (
-                SELECT 1 FROM unified.certificate_renewals 
-                WHERE certificate_id = cert_record.id 
+                SELECT 1 FROM unified.certificate_renewals
+                WHERE certificate_id = cert_record.id
                 AND scheduled_at > CURRENT_TIMESTAMP
                 AND completed_at IS NULL
             ) THEN
@@ -296,12 +296,12 @@ BEGIN
                     'automatic',
                     'expiration_check'
                 );
-                
+
                 renewal_scheduled := true;
             ELSE
                 renewal_scheduled := false;
             END IF;
-            
+
             -- Return the record
             certificate_id := cert_record.id;
             domain := cert_record.domain;

@@ -184,6 +184,7 @@ Now you can start coding with all quality checks automated!
 ### Poststack Development Workflow
 
 **⚠️ IMPORTANT: Poststack Installation After Changes**
+
 - When making changes to poststack source code at `/home/seth/Software/dev/poststack/src/`
 - You MUST reinstall poststack into the unified project's virtual environment
 - Command: `pip install -e /home/seth/Software/dev/poststack/` (from unified project directory with .venv activated)
@@ -213,12 +214,14 @@ Now you can start coding with all quality checks automated!
 ### Working Directory Context for Claude Code
 
 **⚠️ Important for Claude Code Sessions:**
+
 - This project is frequently edited and executed by Claude Code assistants
 - Claude Code maintains persistent working directory state across tool calls
 - Commands may execute from different directories depending on session history
 - **Always verify your current working directory** before running context-dependent commands
 
 **Best Practices:**
+
 - Use `pwd` to check current working directory when troubleshooting
 - Use absolute paths for critical operations: `/home/seth/Software/dev/unified/`
 - Be explicit about directory context in poststack commands

@@ -114,7 +114,7 @@
 <VirtualHost *:80>
     ServerName ${APACHE_SERVER_NAME}
     ServerAlias www.${APACHE_SERVER_NAME}
-    
+
     # Let's Encrypt ACME challenge directory (allow HTTP for certificate validation)
     Alias /.well-known /var/www/.well-known
     <Directory "/var/www/.well-known">
@@ -133,17 +133,17 @@
     <If "%{ENV:SSL_REDIRECT} == 'true' && %{REQUEST_URI} !~ m#^/\.well-known/acme-challenge/# && %{REQUEST_URI} !~ m#^/health#">
         Redirect permanent / https://${APACHE_SERVER_NAME}/
     </If>
-    
+
     # Content serving configuration (outside If blocks since DocumentRoot can't be in If context)
     DocumentRoot /var/www/unified
     DirectoryIndex index.php index.html
-    
+
     <Directory /var/www/unified>
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
     </Directory>
-    
+
     # Protected areas with same authentication
     <Directory "/var/www/unified/admin">
         AuthType Basic
