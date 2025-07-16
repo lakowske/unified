@@ -28,7 +28,7 @@ check_certificate_exists() {
     local domain="$1"
     local cert_type="$2"
     local cert_dir="$CERT_DIR"
-    
+
     local target_dir
     case "$cert_type" in
         "live")
@@ -45,7 +45,7 @@ check_certificate_exists() {
             return 1
             ;;
     esac
-    
+
     if [ -f "$target_dir/fullchain.pem" ] && [ -f "$target_dir/privkey.pem" ]; then
         # Check if certificate is not expired
         if openssl x509 -checkend 86400 -noout -in "$target_dir/fullchain.pem" >/dev/null 2>&1; then
@@ -68,7 +68,7 @@ check_certificate_exists() {
 # Function to configure SSL based on preference
 configure_ssl_certificates() {
     local domain="$MAIL_DOMAIN"
-    
+
     # If SSL is disabled, skip certificate configuration
     if [ "$SSL_ENABLED" != "true" ]; then
         echo "SSL is disabled, skipping certificate configuration"
@@ -78,7 +78,7 @@ configure_ssl_certificates() {
         export CERT_TYPE_USED="none"
         return 0
     fi
-    
+
     # If specific certificate type preference is set, only check that type
     if [ -n "$CERT_TYPE_PREFERENCE" ]; then
         echo "Certificate type preference specified: $CERT_TYPE_PREFERENCE"
@@ -100,7 +100,7 @@ configure_ssl_certificates() {
                 ;;
         esac
     fi
-    
+
     # Certificate preference logic: live > staged > self-signed
     # Check for live certificates first (Let's Encrypt production)
     if check_certificate_exists "$domain" "live"; then
@@ -129,27 +129,27 @@ configure_ssl_certificates() {
 configure_dovecot_ssl() {
     local dovecot_conf="/etc/dovecot/dovecot.conf"
     local dovecot_template="/etc/dovecot/dovecot.conf.template"
-    
+
     echo "Configuring Dovecot SSL settings..."
-    
+
     if [ "$SSL_ENABLED" = "true" ] && [ -n "$SSL_CERT_PATH" ] && [ -n "$SSL_KEY_PATH" ]; then
         echo "Enabling SSL for Dovecot with certificate: $SSL_CERT_PATH"
-        
+
         # Update Dovecot configuration to enable SSL
         sed -e "s|^ssl = no|ssl = yes|" \
             -e "s|^# ssl_cert = <.*|ssl_cert = <$SSL_CERT_PATH|" \
             -e "s|^# ssl_key = <.*|ssl_key = <$SSL_KEY_PATH|" \
             "$dovecot_template" | envsubst > "$dovecot_conf"
-        
+
         # Ensure certificate files are readable by dovecot
         chown dovecot:dovecot "$SSL_CERT_PATH" "$SSL_KEY_PATH" 2>/dev/null || true
         chmod 644 "$SSL_CERT_PATH" 2>/dev/null || true
         chmod 600 "$SSL_KEY_PATH" 2>/dev/null || true
-        
+
         echo "Dovecot SSL configuration updated successfully"
     else
         echo "SSL disabled for Dovecot"
-        
+
         # Use template with variable substitution but SSL disabled
         envsubst < "$dovecot_template" > "$dovecot_conf"
     fi
@@ -161,23 +161,23 @@ configure_postfix_ssl() {
     local postfix_template="/etc/postfix/main.cf.template"
     local postfix_master_conf="/etc/postfix/master.cf"
     local postfix_master_template="/etc/postfix/master.cf.template"
-    
+
     echo "Configuring Postfix SSL settings..."
-    
+
     if [ "$SSL_ENABLED" = "true" ] && [ -n "$SSL_CERT_PATH" ] && [ -n "$SSL_KEY_PATH" ]; then
         echo "Enabling SSL for Postfix with certificate: $SSL_CERT_PATH"
-        
+
         # Update Postfix main.cf configuration to enable TLS
         sed -e "s|^smtpd_use_tls = no|smtpd_use_tls = yes|" \
             -e "s|^# smtpd_tls_cert_file = .*|smtpd_tls_cert_file = $SSL_CERT_PATH|" \
             -e "s|^# smtpd_tls_key_file = .*|smtpd_tls_key_file = $SSL_KEY_PATH|" \
             -e "s|^# smtpd_tls_security_level = .*|smtpd_tls_security_level = may|" \
             "$postfix_template" | envsubst > "$postfix_conf"
-        
+
         # Update Postfix master.cf configuration for SSL ports
         echo "Configuring Postfix SSL ports (submission and smtps)"
         envsubst < "$postfix_master_template" > "$postfix_master_conf"
-        
+
         # Add additional TLS settings for better security
         cat >> "$postfix_conf" << EOF
 
@@ -194,16 +194,16 @@ smtpd_tls_received_header = yes
 smtpd_tls_ask_ccert = yes
 tls_random_source = dev:/dev/urandom
 EOF
-        
+
         # Ensure certificate files are readable by postfix
         chown postfix:postfix "$SSL_CERT_PATH" "$SSL_KEY_PATH" 2>/dev/null || true
         chmod 644 "$SSL_CERT_PATH" 2>/dev/null || true
         chmod 600 "$SSL_KEY_PATH" 2>/dev/null || true
-        
+
         echo "Postfix SSL configuration updated successfully"
     else
         echo "SSL disabled for Postfix"
-        
+
         # Use templates with variable substitution but SSL disabled
         envsubst < "$postfix_template" > "$postfix_conf"
         envsubst < "$postfix_master_template" > "$postfix_master_conf"
@@ -216,13 +216,13 @@ log_certificate_status() {
         echo "WARNING: DATABASE_URL not set, skipping certificate status logging"
         return 0
     fi
-    
+
     local domain="$MAIL_DOMAIN"
     local cert_type="$CERT_TYPE_USED"
     local ssl_enabled="$SSL_ENABLED"
-    
+
     echo "Logging certificate status to database..."
-    
+
     # Use Python to update certificate status in database
     /data/.venv/bin/python << EOF
 import os
@@ -236,32 +236,32 @@ try:
     cert_type = os.environ.get('CERT_TYPE_USED', 'none')
     ssl_enabled = os.environ.get('SSL_ENABLED', 'false')
     ssl_cert_path = os.environ.get('SSL_CERT_PATH', '')
-    
+
     # Connect to database
     conn = psycopg2.connect(os.environ.get('DATABASE_URL'))
     cur = conn.cursor()
-    
+
     # Check if the table exists first
     cur.execute("""
         SELECT EXISTS (
-            SELECT 1 FROM information_schema.tables 
-            WHERE table_schema = 'unified' 
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = 'unified'
             AND table_name = 'service_certificates'
         )
     """)
     table_exists = cur.fetchone()[0]
-    
+
     if table_exists:
         # Update certificate status for mail service
         cur.execute("""
             INSERT INTO unified.service_certificates (
-                service_name, domain, certificate_type, ssl_enabled, 
+                service_name, domain, certificate_type, ssl_enabled,
                 certificate_path, last_updated, is_active
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s
             )
-            ON CONFLICT (service_name, domain) 
-            DO UPDATE SET 
+            ON CONFLICT (service_name, domain)
+            DO UPDATE SET
                 certificate_type = EXCLUDED.certificate_type,
                 ssl_enabled = EXCLUDED.ssl_enabled,
                 certificate_path = EXCLUDED.certificate_path,
@@ -271,19 +271,19 @@ try:
             'mail', domain, cert_type, ssl_enabled == 'true',
             ssl_cert_path, datetime.now(), True
         ))
-        
+
         # Trigger certificate change notification
         cur.execute("NOTIFY certificate_change, %s", (f"mail:{domain}:{cert_type}",))
-        
+
         conn.commit()
         print(f"Certificate status logged: service=mail, domain={domain}, type={cert_type}, ssl={ssl_enabled}")
     else:
         print(f"WARNING: service_certificates table not found, skipping certificate status logging")
         print(f"Certificate status: service=mail, domain={domain}, type={cert_type}, ssl={ssl_enabled}")
-    
+
     cur.close()
     conn.close()
-    
+
 except Exception as e:
     print(f"WARNING: Failed to log certificate status: {e}")
     print(f"Certificate status: service=mail, domain={domain}, type={cert_type}, ssl={ssl_enabled}")

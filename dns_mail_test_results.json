@@ -1,0 +1,34 @@
+{
+  "basic": {
+    "test_type": "basic",
+    "exit_code": 0,
+    "passed": true,
+    "timestamp": 1752678899.2805839
+  },
+  "advanced": {
+    "test_type": "advanced",
+    "exit_code": 0,
+    "passed": true,
+    "timestamp": 1752678899.4725952
+  },
+  "integration": {
+    "test_type": "integration",
+    "exit_code": 0,
+    "passed": true,
+    "timestamp": 1752678899.535687
+  },
+  "performance": {
+    "test_type": "performance",
+    "exit_code": 0,
+    "passed": true,
+    "timestamp": 1752678899.6331859
+  },
+  "overall": {
+    "total_tests": 4,
+    "passed_tests": 4,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "duration": 0.642838716506958,
+    "timestamp": 1752678899.633187
+  }
+}

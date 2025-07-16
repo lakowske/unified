@@ -132,7 +132,7 @@ CREATE TABLE unified.service_certificates (
     certificate_path VARCHAR(500),
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT true,
-    
+
     -- Constraints
     UNIQUE(service_name, domain),
     CHECK (certificate_type IN ('live', 'staged', 'self-signed', 'none'))

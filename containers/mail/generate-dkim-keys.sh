@@ -24,15 +24,15 @@ mkdir -p "$KEY_DIR"
 # Generate DKIM key pair if it doesn't exist
 if [ ! -f "$KEY_DIR/mail.private" ]; then
     log "Generating new DKIM key pair for selector 'mail'"
-    
+
     # Generate key pair
     opendkim-genkey -b 2048 -d "$MAIL_DOMAIN" -D "$KEY_DIR" -r -s mail -v
-    
+
     # Set proper permissions
     chown -R opendkim:opendkim "$KEY_DIR"
     chmod 600 "$KEY_DIR/mail.private"
     chmod 644 "$KEY_DIR/mail.txt"
-    
+
     log "DKIM key pair generated successfully"
     log "Private key: $KEY_DIR/mail.private"
     log "Public key DNS record: $KEY_DIR/mail.txt"
@@ -52,14 +52,14 @@ log "=========================="
 if [ -f "$KEY_DIR/mail.private" ]; then
     PRIVATE_PERMS=$(stat -c "%a" "$KEY_DIR/mail.private")
     PRIVATE_OWNER=$(stat -c "%U:%G" "$KEY_DIR/mail.private")
-    
+
     log "Private key permissions: $PRIVATE_PERMS (owner: $PRIVATE_OWNER)"
-    
+
     if [ "$PRIVATE_PERMS" != "600" ]; then
         log "WARNING: Private key permissions should be 600"
         chmod 600 "$KEY_DIR/mail.private"
     fi
-    
+
     if [ "$PRIVATE_OWNER" != "opendkim:opendkim" ]; then
         log "WARNING: Private key should be owned by opendkim:opendkim"
         chown opendkim:opendkim "$KEY_DIR/mail.private"
