@@ -99,7 +99,7 @@ class DKIMRecordManager:
 
     def update_zone_file(self, public_key):
         """Update the zone file with DKIM record."""
-        zone_file = f"/data/zones/{self.mail_domain}.zone"
+        zone_file = f"/data/dns/zones/{self.mail_domain}.zone"
 
         try:
             # Read current zone file

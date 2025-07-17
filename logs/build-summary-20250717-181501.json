@@ -1,0 +1,88 @@
+{
+  "build_session": {
+    "start_time": "2025-07-17T18:15:01.015601+00:00",
+    "end_time": "2025-07-17T18:15:01.905670+00:00",
+    "total_time_seconds": 0.890069,
+    "total_containers": 7,
+    "successful_builds": 7,
+    "failed_builds": 0
+  },
+  "build_results": {
+    "base-debian": {
+      "name": "base-debian",
+      "success": true,
+      "build_time": 0.0,
+      "image_size": "564 MB\n564 MB",
+      "error_message": null,
+      "start_time": "2025-07-17 18:15:01.015799+00:00",
+      "end_time": "2025-07-17 18:15:01.015799+00:00",
+      "log_file": "logs/build-base-debian-20250717-181501.log"
+    },
+    "apache": {
+      "name": "apache",
+      "success": true,
+      "build_time": 0.0,
+      "image_size": "616 MB",
+      "error_message": null,
+      "start_time": "2025-07-17 18:15:01.141022+00:00",
+      "end_time": "2025-07-17 18:15:01.141022+00:00",
+      "log_file": "logs/build-apache-20250717-181501.log"
+    },
+    "dns": {
+      "name": "dns",
+      "success": true,
+      "build_time": 0.0,
+      "image_size": "572 MB",
+      "error_message": null,
+      "start_time": "2025-07-17 18:15:01.268646+00:00",
+      "end_time": "2025-07-17 18:15:01.268646+00:00",
+      "log_file": "logs/build-dns-20250717-181501.log"
+    },
+    "mail": {
+      "name": "mail",
+      "success": true,
+      "build_time": 0.0,
+      "image_size": "660 MB",
+      "error_message": null,
+      "start_time": "2025-07-17 18:15:01.403605+00:00",
+      "end_time": "2025-07-17 18:15:01.403605+00:00",
+      "log_file": "logs/build-mail-20250717-181501.log"
+    },
+    "postgres": {
+      "name": "postgres",
+      "success": true,
+      "build_time": 0.0,
+      "image_size": "1.58 GB",
+      "error_message": null,
+      "start_time": "2025-07-17 18:15:01.537861+00:00",
+      "end_time": "2025-07-17 18:15:01.537861+00:00",
+      "log_file": "logs/build-postgres-20250717-181501.log"
+    },
+    "poststack-cli": {
+      "name": "poststack-cli",
+      "success": true,
+      "build_time": 0.0,
+      "image_size": "1.11 GB",
+      "error_message": null,
+      "start_time": "2025-07-17 18:15:01.651562+00:00",
+      "end_time": "2025-07-17 18:15:01.651562+00:00",
+      "log_file": "logs/build-poststack-cli-20250717-181501.log"
+    },
+    "volume-setup": {
+      "name": "volume-setup",
+      "success": true,
+      "build_time": 0.0,
+      "image_size": "564 MB",
+      "error_message": null,
+      "start_time": "2025-07-17 18:15:01.784490+00:00",
+      "end_time": "2025-07-17 18:15:01.784490+00:00",
+      "log_file": "logs/build-volume-setup-20250717-181501.log"
+    }
+  },
+  "performance_metrics": {
+    "fastest_build": "base-debian",
+    "slowest_build": "base-debian",
+    "average_build_time": 0.0,
+    "total_build_time": 0.0
+  }
+}

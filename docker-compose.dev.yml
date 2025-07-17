@@ -40,8 +40,8 @@ services:
       # Development debugging
       DNS_LOG_LEVEL: debug
     ports:
-      - "5353:53/udp"  # Dev DNS port
-      - "5353:53/tcp"
+      - "5354:53/udp"  # Dev DNS port
+      - "5354:53/tcp"
 
   # Volume setup runs with init profile for development
   volume-setup:

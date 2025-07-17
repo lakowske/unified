@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create necessary directories
-RUN mkdir -p /var/log/named /var/run/named /etc/bind/zones /data/zones
-RUN chown -R bind:bind /var/log/named /var/run/named /etc/bind/zones /data/zones
+RUN mkdir -p /var/log/named /var/run/named /etc/bind/zones /data/dns/zones
+RUN chown -R bind:bind /var/log/named /var/run/named /etc/bind/zones /data/dns/zones
 RUN chown -R bind:bind /var/cache/bind
 
 # Copy configuration files
@@ -35,8 +35,8 @@ RUN chmod +x /entrypoint.sh
 # Expose DNS ports
 EXPOSE 53/udp 53/tcp 953/tcp
 
-# Create volume for zone files
-VOLUME ["/data/zones"]
+# Create volume for zone files  
+VOLUME ["/data/dns/zones"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

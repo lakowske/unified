@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS unified.dns_records (
     is_active BOOLEAN DEFAULT TRUE
 );
 
--- Create unique index on domain, name, and type
-CREATE UNIQUE INDEX IF NOT EXISTS idx_dns_records_unique
-ON unified.dns_records(domain, name, type)
-WHERE is_active = TRUE;
+-- Create unique constraint on domain, name, and type
+ALTER TABLE unified.dns_records
+ADD CONSTRAINT dns_records_unique_domain_name_type
+UNIQUE (domain, name, type);
 
 -- Create index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_dns_records_domain
@@ -63,10 +63,10 @@ CREATE TRIGGER dns_record_update_serial
     EXECUTE FUNCTION unified.update_dns_zone_serial();
 
 -- Grant permissions to unified user
-GRANT SELECT, INSERT, UPDATE, DELETE ON unified.dns_records TO unified_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON unified.dns_zones TO unified_user;
-GRANT USAGE ON SEQUENCE unified.dns_records_id_seq TO unified_user;
-GRANT USAGE ON SEQUENCE unified.dns_zones_id_seq TO unified_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON unified.dns_records TO unified_dev_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON unified.dns_zones TO unified_dev_user;
+GRANT USAGE ON SEQUENCE unified.dns_records_id_seq TO unified_dev_user;
+GRANT USAGE ON SEQUENCE unified.dns_zones_id_seq TO unified_dev_user;
 
 -- Insert default zone for mail domain (will be updated by application)
 INSERT INTO unified.dns_zones (domain, primary_ns, admin_email)

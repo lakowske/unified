@@ -4,7 +4,7 @@
 // Authoritative zone for mail domain
 zone "${MAIL_DOMAIN}" {
     type master;
-    file "/data/zones/${MAIL_DOMAIN}.zone";
+    file "/data/dns/zones/${MAIL_DOMAIN}.zone";
     allow-update { none; };
     allow-query { any; };
     allow-transfer { none; };
@@ -15,7 +15,7 @@ zone "${MAIL_DOMAIN}" {
 /*
 zone "1.168.192.in-addr.arpa" {
     type master;
-    file "/data/zones/192.168.1.rev";
+    file "/data/dns/zones/192.168.1.rev";
     allow-update { none; };
 };
 */

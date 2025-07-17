@@ -17,12 +17,12 @@ chown -R bind:bind /var/log/named /var/run/named
 # /var/cache/bind is owned by bind in the base system, don't try to change it
 
 # Ensure zone directory exists and has proper permissions
-mkdir -p /data/zones
+mkdir -p /data/dns/zones
 # Only try to change ownership if we can
-if chown -R bind:bind /data/zones 2>/dev/null; then
-    log "Set ownership of /data/zones to bind:bind"
+if chown -R bind:bind /data/dns/zones 2>/dev/null; then
+    log "Set ownership of /data/dns/zones to bind:bind"
 else
-    log "Could not change ownership of /data/zones, continuing anyway"
+    log "Could not change ownership of /data/dns/zones, continuing anyway"
 fi
 
 # RPZ zone removed - not needed for mail DNS setup
@@ -39,14 +39,14 @@ if [ -n "$MAIL_DOMAIN" ] && [ "$MAIL_DOMAIN" != "localhost" ]; then
         # Use sed to replace variables instead of envsubst to preserve $TTL
         sed -e "s/\${MAIL_DOMAIN}/${MAIL_DOMAIN}/g" \
             -e "s/\${MAIL_SERVER_IP}/${MAIL_SERVER_IP}/g" \
-            /usr/local/bin/dns/zones/mail-domain.zone.template > /data/zones/${MAIL_DOMAIN}.zone
+            /usr/local/bin/dns/zones/mail-domain.zone.template > /data/dns/zones/${MAIL_DOMAIN}.zone
         # Only try to change ownership if we can
-        if chown bind:bind /data/zones/${MAIL_DOMAIN}.zone 2>/dev/null; then
+        if chown bind:bind /data/dns/zones/${MAIL_DOMAIN}.zone 2>/dev/null; then
             log "Set ownership of ${MAIL_DOMAIN}.zone to bind:bind"
         else
             log "Could not change ownership of ${MAIL_DOMAIN}.zone, continuing anyway"
         fi
-        log "Zone file created: /data/zones/${MAIL_DOMAIN}.zone"
+        log "Zone file created: /data/dns/zones/${MAIL_DOMAIN}.zone"
     else
         log "WARNING: Mail domain zone template not found"
     fi
@@ -72,8 +72,8 @@ fi
 log "Checking zone files"
 
 # Check mail domain zone file
-if [ -n "$MAIL_DOMAIN" ] && [ -f "/data/zones/${MAIL_DOMAIN}.zone" ]; then
-    if ! named-checkzone "$MAIL_DOMAIN" "/data/zones/${MAIL_DOMAIN}.zone"; then
+if [ -n "$MAIL_DOMAIN" ] && [ -f "/data/dns/zones/${MAIL_DOMAIN}.zone" ]; then
+    if ! named-checkzone "$MAIL_DOMAIN" "/data/dns/zones/${MAIL_DOMAIN}.zone"; then
         log "WARNING: Mail domain zone file validation failed"
     fi
 fi

@@ -14,7 +14,7 @@ if [ -d "$LOG_DIR" ]; then
     echo "Creating log directory structure..."
 
     # Create directories only if they don't exist
-    for dir in "$LOG_DIR" "$LOG_DIR/postgres" "$LOG_DIR/apache" "$LOG_DIR/mail"; do
+    for dir in "$LOG_DIR" "$LOG_DIR/postgres" "$LOG_DIR/apache" "$LOG_DIR/mail" "$LOG_DIR/containers" "$LOG_DIR/database"; do
         if [ ! -d "$dir" ]; then
             echo "Creating directory: $dir"
             mkdir -p "$dir"
@@ -61,7 +61,7 @@ fi
 # Set proper permissions with certgroup for shared access (idempotent - safe to run multiple times)
 if [ -d "$LOG_DIR" ]; then
     echo "Setting permissions on $LOG_DIR with certgroup for shared access..."
-    chown -R 1000:9999 "$LOG_DIR" || echo "Warning: Could not change ownership to 1000:9999"
+    chown -R 9999:9999 "$LOG_DIR" || echo "Warning: Could not change ownership to 9999:9999"
     chmod -R 755 "$LOG_DIR" || echo "Warning: Could not change permissions"
 
     # Set specific ownership for postgres logs (postgres user UID 101)
@@ -69,6 +69,16 @@ if [ -d "$LOG_DIR" ]; then
         echo "Setting postgres log directory ownership for postgres user (UID 101)..."
         chown -R 101:9999 "$LOG_DIR/postgres" || echo "Warning: Could not change postgres log ownership to 101:9999"
     fi
+fi
+
+# Set proper permissions for postgres data directory (idempotent)
+POSTGRES_DATA="/data/postgres/data"
+if [ -d "$POSTGRES_DATA" ]; then
+    echo "Setting postgres data directory ownership for postgres user (UID 101)..."
+    chown -R 101:103 "$POSTGRES_DATA" || echo "Warning: Could not change postgres data ownership to 101:103"
+    chmod 700 "$POSTGRES_DATA" || echo "Warning: Could not set postgres data directory permissions to 700"
+else
+    echo "Postgres data volume not mounted at $POSTGRES_DATA, skipping postgres data directory setup"
 fi
 
 # Set proper permissions on certificate directories with certgroup for shared access

@@ -23,7 +23,6 @@ services:
     volumes:
       - postgres_data:/data/postgres/data
       - logs:/data/logs
-      - postgres_config:/data/postgres/config
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432"]
       interval: 10s
@@ -81,7 +80,6 @@ services:
     volumes:
       - logs:/data/logs
       - certificates:/data/certificates
-      - apache_config:/etc/apache2/conf.d
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
@@ -146,7 +144,6 @@ services:
     volumes:
       - mail_data:/var/mail
       - logs:/data/logs
-      - mail_config:/etc/dovecot/conf.d
       - certificates:/data/certificates
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 25 && nc -z localhost 143"]
@@ -250,9 +247,6 @@ services:
       - mail_data:/var/mail
       - bind_zones:/data/dns/zones
       - postgres_data:/data/postgres/data
-      - postgres_config:/data/postgres/config
-      - apache_config:/etc/apache2/conf.d
-      - mail_config:/etc/dovecot/conf.d
     restart: "no"  # Run once like init container
     profiles:
       - init  # Only run when explicitly requested
@@ -268,9 +262,3 @@ volumes:
     name: mail-data-${ENVIRONMENT}
   bind_zones:
     name: bind-zones-${ENVIRONMENT}
-  postgres_config:
-    name: postgres-config-${ENVIRONMENT}
-  apache_config:
-    name: apache-config-${ENVIRONMENT}
-  mail_config:
-    name: mail-config-${ENVIRONMENT}
