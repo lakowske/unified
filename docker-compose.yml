@@ -149,7 +149,7 @@ services:
       - mail_config:/etc/dovecot/conf.d
       - certificates:/data/certificates
     healthcheck:
-      test: ["CMD", "/bin/bash", "-c", "nc -z localhost 25 && nc -z localhost 143"]
+      test: ["CMD-SHELL", "nc -z localhost 25 && nc -z localhost 143"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -204,6 +204,12 @@ services:
     volumes:
       - bind_zones:/data/dns/zones
       - logs:/data/logs
+    healthcheck:
+      test: ["CMD-SHELL", "dig @localhost lab.sethlakowske.com +short || nc -zv localhost 53"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
     deploy:
       resources:
@@ -213,6 +219,25 @@ services:
         reservations:
           memory: 128M
           cpus: '0.05'
+
+  db-migrate:
+    image: localhost/poststack/cli:latest
+    container_name: db-migrate-${ENVIRONMENT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database connection for migrations
+      POSTSTACK_DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      POSTSTACK_LOG_LEVEL: INFO
+      ENVIRONMENT: ${ENVIRONMENT}
+    volumes:
+      - ./migrations:/app/migrations:ro  # Mount local migrations directory
+      - logs:/data/logs
+    command: ["db", "migrate-project", "--yes"]
+    restart: "no"  # Run once like init container
+    profiles:
+      - init  # Only run when explicitly requested
 
   volume-setup:
     image: localhost/unified/volume-setup:latest

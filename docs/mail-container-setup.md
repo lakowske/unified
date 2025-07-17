@@ -29,7 +29,7 @@ containers/mail/
 ├── entrypoint.sh                  # Container startup script
 ├── dovecot.conf.template          # Dovecot IMAP configuration
 ├── dovecot-sql.conf.template      # Dovecot PostgreSQL queries
-├── mail-pod.yaml                  # Podman pod specification
+├── (pod files removed - now uses Docker Compose)
 ├── postfix/
 │   ├── main.cf.template           # Postfix main configuration
 │   └── master.cf.template         # Postfix service configuration

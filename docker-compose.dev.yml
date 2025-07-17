@@ -1,0 +1,50 @@
+# Docker Compose - Development Environment Overrides
+# This file contains development-specific settings that override base configuration
+version: '3.8'
+
+services:
+  postgres:
+    environment:
+      # Override with dev-specific database settings
+      POSTGRES_DB: unified_dev
+      POSTGRES_USER: unified_dev_user
+      POSTGRES_PASSWORD: dev_password123
+    ports:
+      - "5436:5432"  # Dev-specific port to avoid conflicts
+
+  apache:
+    environment:
+      # Development debugging
+      APACHE_LOG_LEVEL: debug
+      DEBUG_MODE: "true"
+      LOG_LEVEL: debug
+    ports:
+      - "8080:80"    # Standard dev ports
+      - "8443:443"
+
+  mail:
+    environment:
+      # Development debugging
+      MAIL_LOG_LEVEL: debug
+      DEBUG_MODE: "true"
+      LOG_LEVEL: debug
+    ports:
+      - "2525:25"    # Dev mail ports to avoid conflicts
+      - "1144:143"
+      - "9933:993"
+      - "4465:465"
+      - "5587:587"
+
+  bind:
+    environment:
+      # Development debugging
+      DNS_LOG_LEVEL: debug
+    ports:
+      - "5353:53/udp"  # Dev DNS port
+      - "5353:53/tcp"
+
+  # Volume setup runs with init profile for development
+  volume-setup:
+    profiles:
+      - init
+      - dev  # Also run in dev profile for convenience

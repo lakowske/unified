@@ -197,11 +197,12 @@ Now you can start coding with all quality checks automated!
   - `poststack build` - builds all containers (base, postgres, and all project containers)
   - `poststack build postgres` - builds only the postgres container (and base image dependency)
   - `poststack build apache mail` - builds only apache and mail containers (and base image dependency)
-- **Always use poststack for environment management**: Use `poststack env [start|stop|restart|status]` instead of direct `podman` commands
-  - `poststack env start dev` - starts the dev environment
-  - `poststack env stop dev --rm` - stops dev environment and removes containers
-  - `poststack env restart dev` - performs clean restart (stop with removal, then start)
-  - Only use direct `podman` commands as a last resort when poststack commands are not available
+- **Docker Compose is now the preferred orchestration method**: Use `docker compose` commands for environment management
+  - `docker compose --env-file .env.dev up -d` - starts the dev environment
+  - `docker compose --env-file .env.dev down -v` - stops dev environment and removes containers
+  - `docker compose --env-file .env.dev restart` - performs restart
+  - **Legacy poststack commands still work** but Docker Compose is recommended for better standardization
+  - Only use direct `podman` commands as a last resort when other commands are not available
 - **Always use poststack for database migrations**: Use `poststack db [command]` for managing database schema changes
   - `poststack db migrate-project` - applies all pending migrations from local migrations directory
   - `poststack db migrate-project --dry-run` - shows what migrations would be applied without running them
