@@ -2,6 +2,9 @@
 # Volume setup script - idempotent initialization without privileges
 # This script can be run multiple times safely
 
+# Set up signal handlers for clean shutdown
+trap 'echo "Received shutdown signal, exiting..."; exit 0' SIGTERM SIGINT
+
 echo "Setting up volumes for environment: ${ENVIRONMENT:-dev}"
 echo "Running as user: $(id -u):$(id -g)"
 

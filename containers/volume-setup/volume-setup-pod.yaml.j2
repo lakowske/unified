@@ -13,6 +13,7 @@ metadata:
     project: unified
     component: init
 spec:
+  terminationGracePeriodSeconds: 1
   containers:
   - name: volume-setup
     image: localhost/unified/volume-setup:latest
