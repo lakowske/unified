@@ -1,0 +1,251 @@
+# Docker Compose - Base Service Definitions
+# This replaces the complex Podman orchestration system with standard Docker Compose
+version: '3.8'
+
+services:
+  postgres:
+    image: localhost/poststack/postgres:latest
+    container_name: postgres-${ENVIRONMENT}
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: trust
+      PGDATA: /data/postgres/data
+      POSTGRES_INITDB_ARGS: "--auth-host=trust --auth-local=peer"
+      ENVIRONMENT: ${ENVIRONMENT}
+      CONFIG_DIR: /data/config
+      CERT_PATH: /data/certificates
+      BASE_DIR: /data
+      LOG_DIR: /data/logs
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/data/postgres/data
+      - logs:/data/logs
+      - postgres_config:/data/postgres/config
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  apache:
+    image: localhost/unified/apache:latest
+    container_name: apache-${ENVIRONMENT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      volume-setup:
+        condition: service_completed_successfully
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Apache configuration
+      APACHE_SERVER_NAME: ${SERVER_NAME}
+      APACHE_SERVER_ADMIN: ${SERVER_ADMIN}
+      APACHE_LOG_LEVEL: ${APACHE_LOG_LEVEL}
+      SSL_ENABLED: ${SSL_ENABLED}
+      SSL_REDIRECT: ${SSL_REDIRECT}
+
+      # Environment info
+      ENVIRONMENT: ${ENVIRONMENT}
+      CONFIG_DIR: /data/config
+      CERT_PATH: /data/certificates
+      BASE_DIR: /data
+      LOG_DIR: /data/logs
+
+      # Application settings
+      LOG_LEVEL: ${LOG_LEVEL}
+      DEBUG_MODE: ${DEBUG_MODE}
+      APP_VERSION: ${APP_VERSION}
+    ports:
+      - "${APACHE_HOST_PORT}:80"
+      - "${APACHE_HTTPS_PORT}:443"
+    volumes:
+      - logs:/data/logs
+      - certificates:/data/certificates
+      - apache_config:/etc/apache2/conf.d
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  mail:
+    image: localhost/unified/mail:latest
+    container_name: mail-${ENVIRONMENT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      volume-setup:
+        condition: service_completed_successfully
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Environment info
+      ENVIRONMENT: ${ENVIRONMENT}
+      CONFIG_DIR: /data/config
+      CERT_PATH: /data/certificates
+      BASE_DIR: /data
+      LOG_DIR: /data/logs
+
+      # Mail configuration
+      MAIL_DOMAIN: ${MAIL_DOMAIN}
+      MAIL_LOG_LEVEL: ${MAIL_LOG_LEVEL}
+      VMAIL_UID: ${VMAIL_UID}
+      VMAIL_GID: ${VMAIL_GID}
+
+      # SSL settings
+      SSL_ENABLED: ${SSL_ENABLED}
+      CERT_TYPE_PREFERENCE: ${CERT_TYPE_PREFERENCE}
+
+      # Application settings
+      LOG_LEVEL: ${LOG_LEVEL}
+      DEBUG_MODE: ${DEBUG_MODE}
+      APP_VERSION: ${APP_VERSION}
+      APP_NAME: "Unified Mail Server"
+    ports:
+      - "${MAIL_SMTP_PORT}:25"
+      - "${MAIL_IMAP_PORT}:143"
+      - "${MAIL_IMAPS_PORT}:993"
+      - "${MAIL_SMTPS_PORT}:465"
+      - "${MAIL_SUBMISSION_PORT}:587"
+    volumes:
+      - mail_data:/var/mail
+      - logs:/data/logs
+      - mail_config:/etc/dovecot/conf.d
+      - certificates:/data/certificates
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c", "nc -z localhost 25 && nc -z localhost 143"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  bind:
+    image: localhost/unified/dns:latest
+    container_name: bind-${ENVIRONMENT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      volume-setup:
+        condition: service_completed_successfully
+    environment:
+      # Database connection
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Environment info
+      ENVIRONMENT: ${ENVIRONMENT}
+      CONFIG_DIR: /data/config
+      CERT_PATH: /data/certificates
+      BASE_DIR: /data
+      LOG_DIR: /data/logs
+
+      # DNS configuration
+      DNS_LOG_LEVEL: ${DNS_LOG_LEVEL}
+      DNS_FORWARDERS: ${DNS_FORWARDERS}
+      DNS_ALLOW_QUERY: ${DNS_ALLOW_QUERY}
+      DNS_RECURSION: ${DNS_RECURSION}
+      DNS_CACHE_SIZE: ${DNS_CACHE_SIZE}
+      DNS_MAX_CACHE_TTL: ${DNS_MAX_CACHE_TTL}
+
+      # Mail domain settings
+      MAIL_DOMAIN: ${MAIL_DOMAIN}
+      MAIL_SERVER_IP: ${MAIL_SERVER_IP}
+    ports:
+      - "${BIND_PORT}:53/udp"
+      - "${BIND_PORT}:53/tcp"
+    volumes:
+      - bind_zones:/data/dns/zones
+      - logs:/data/logs
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+        reservations:
+          memory: 128M
+          cpus: '0.05'
+
+  volume-setup:
+    image: localhost/unified/volume-setup:latest
+    container_name: volume-setup-${ENVIRONMENT}
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+    volumes:
+      - logs:/data/logs
+      - certificates:/data/certificates
+      - mail_data:/var/mail
+      - bind_zones:/data/dns/zones
+      - postgres_data:/data/postgres/data
+      - postgres_config:/data/postgres/config
+      - apache_config:/etc/apache2/conf.d
+      - mail_config:/etc/dovecot/conf.d
+    restart: "no"  # Run once like init container
+    profiles:
+      - init  # Only run when explicitly requested
+
+volumes:
+  postgres_data:
+    name: postgres-data-${ENVIRONMENT}
+  logs:
+    name: logs-${ENVIRONMENT}
+  certificates:
+    name: certificates-${ENVIRONMENT}
+  mail_data:
+    name: mail-data-${ENVIRONMENT}
+  bind_zones:
+    name: bind-zones-${ENVIRONMENT}
+  postgres_config:
+    name: postgres-config-${ENVIRONMENT}
+  apache_config:
+    name: apache-config-${ENVIRONMENT}
+  mail_config:
+    name: mail-config-${ENVIRONMENT}

@@ -14,16 +14,24 @@ export APACHE_RUN_DIR=${APACHE_RUN_DIR:-/var/run/apache2}
 export APACHE_LOCK_DIR=${APACHE_LOCK_DIR:-/var/lock/apache2}
 export APACHE_LOG_DIR=${APACHE_LOG_DIR:-/data/logs/apache}
 
-# Unified project specific variables
-export UNIFIED_DB_HOST=${UNIFIED_DB_HOST:-localhost}
-export UNIFIED_DB_PORT=${UNIFIED_DB_PORT:-5435}
-export UNIFIED_DB_NAME=${UNIFIED_DB_NAME:-poststack}
-export UNIFIED_DB_USER=${UNIFIED_DB_USER:-poststack}
-export UNIFIED_DB_PASSWORD=${UNIFIED_DB_PASSWORD:-poststack_dev}
-export UNIFIED_DB_SCHEMA=${UNIFIED_DB_SCHEMA:-unified}
+# Database configuration - use standard DB_ environment variables
+export DB_HOST=${DB_HOST:-localhost}
+export DB_PORT=${DB_PORT:-5432}
+export DB_NAME=${DB_NAME:-poststack}
+export DB_USER=${DB_USER:-poststack}
+export DB_PASSWORD=${DB_PASSWORD:-poststack_dev}
+export DB_SCHEMA=${DB_SCHEMA:-unified}
+
+# Legacy UNIFIED_DB_* variables for backward compatibility
+export UNIFIED_DB_HOST=${DB_HOST}
+export UNIFIED_DB_PORT=${DB_PORT}
+export UNIFIED_DB_NAME=${DB_NAME}
+export UNIFIED_DB_USER=${DB_USER}
+export UNIFIED_DB_PASSWORD=${DB_PASSWORD}
+export UNIFIED_DB_SCHEMA=${DB_SCHEMA}
 
 # Certificate generation database URL
-export DATABASE_URL="postgresql://${UNIFIED_DB_USER}:${UNIFIED_DB_PASSWORD}@${UNIFIED_DB_HOST}:${UNIFIED_DB_PORT}/${UNIFIED_DB_NAME}"
+export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
 # SSL/TLS Certificate configuration
 export SSL_ENABLED=${SSL_ENABLED:-false}
