@@ -41,7 +41,7 @@ spec:
     - name: mail-config
       mountPath: /etc/dovecot/conf.d
   containers:
-  - name: mail-server
+  - name: mail
     image: localhost/unified/mail:latest
 {% if MAIL_USE_HOST_NETWORK != "true" %}
     ports:

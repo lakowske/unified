@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: unified-dns-{{ POSTSTACK_ENVIRONMENT }}-dns-server
+  name: unified-dns-{{ POSTSTACK_ENVIRONMENT }}
   labels:
     app: unified-dns
     environment: {{ POSTSTACK_ENVIRONMENT }}
@@ -12,7 +12,7 @@ spec:
   dnsPolicy: ClusterFirstWithHostNet
   {% endif %}
   containers:
-  - name: dns-server
+  - name: dns
     image: unified/dns:latest
     ports:
     - containerPort: 53

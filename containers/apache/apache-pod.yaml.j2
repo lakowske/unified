@@ -36,7 +36,7 @@ spec:
     - name: certificates
       mountPath: /data/certificates
   containers:
-  - name: apache-web
+  - name: apache
     image: localhost/unified/apache:latest
 {% if APACHE_USE_HOST_NETWORK != "true" %}
     ports:
