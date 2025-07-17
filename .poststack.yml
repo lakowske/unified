@@ -77,16 +77,6 @@ environments:
           DB_NAME: unified_dev
           DB_USER: unified_dev_user
           DB_PASSWORD: "dev_password123"
-      - name: fail2ban
-        type: fail2ban
-        pod: containers/fail2ban/fail2ban-pod.yaml.j2
-        depends_on: [apache, mail, dns]
-        variables:
-          # Fail2ban-specific variables
-          FAIL2BAN_LOG_LEVEL: INFO
-          FAIL2BAN_BANTIME: "3600"
-          FAIL2BAN_FINDTIME: "600"
-          FAIL2BAN_MAXRETRY: "5"
     init: []
     volumes:
       postgres_data:
@@ -101,10 +91,6 @@ environments:
         type: emptyDir
       unified_logs:
         type: named
-      fail2ban_data:
-        type: named
-      fail2ban_config:
-        type: emptyDir
       certificates:
         type: named
       dns_zones:
