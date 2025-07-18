@@ -119,7 +119,7 @@ echo "Mail services health check passed"\n\
     chmod +x /usr/local/bin/mail-health-check.sh
 
 # Health check for mail services
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=15s --timeout=2s --start-period=1s --retries=3 \
     CMD ["/usr/local/bin/mail-health-check.sh"]
 
 # Set entrypoint

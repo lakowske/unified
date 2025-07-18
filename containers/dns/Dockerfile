@@ -39,7 +39,7 @@ EXPOSE 53/udp 53/tcp 953/tcp
 VOLUME ["/data/dns/zones"]
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=15s --timeout=2s --start-period=1s --retries=3 \
   CMD dig @127.0.0.1 -p 53 . NS || exit 1
 
 # Start as root, entrypoint will handle switching to bind user

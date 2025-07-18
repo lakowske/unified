@@ -89,7 +89,7 @@ fi\n\
     chmod +x /usr/local/bin/postgres-health-check.sh
 
 # Health check for PostgreSQL
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=15s --timeout=2s --start-period=1s --retries=3 \
     CMD ["/usr/local/bin/postgres-health-check.sh"]
 
 # Use postgres user by default

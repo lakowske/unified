@@ -1,7 +1,8 @@
-"""Environment lifecycle management.
+"""Unified environment lifecycle management.
 
 This module provides functionality to create, start, stop, and remove
 Docker Compose environments for development, testing, and deployment.
+Supports both production and test environment directory structures.
 """
 
 import logging
@@ -15,16 +16,18 @@ from .config import EnvironmentConfig
 logger = logging.getLogger(__name__)
 
 
-class EnvironmentManager:
-    """Manages Docker Compose environment lifecycle operations."""
+class UnifiedEnvironmentManager:
+    """Unified manager for all Docker Compose environment lifecycle operations."""
 
-    def __init__(self, project_dir: Union[str, Path]):
-        """Initialize environment manager.
+    def __init__(self, project_dir: Union[str, Path], environments_dir: str = "environments"):
+        """Initialize unified environment manager.
 
         Args:
-            project_dir: Path to the project directory containing Docker Compose files
+            project_dir: Path to the project directory
+            environments_dir: Directory containing environment subdirectories
         """
         self.project_dir = Path(project_dir)
+        self.environments_dir = self.project_dir / environments_dir
         self.config = EnvironmentConfig(project_dir)
         self.active_environments: Dict[str, Dict[str, Any]] = {}
 
@@ -34,19 +37,96 @@ class EnvironmentManager:
         Returns:
             List of environment names
         """
-        env_files = list(self.project_dir.glob(".env.*"))
-        environments = []
+        if not self.environments_dir.exists():
+            return []
 
-        for env_file in env_files:
-            env_name = env_file.name.replace(".env.", "")
-            if env_name and env_name != ".env":
-                environments.append(env_name)
+        environments = []
+        for env_dir in self.environments_dir.iterdir():
+            if env_dir.is_dir():
+                # Skip directories that don't contain environment files
+                if self._has_environment_files(env_dir):
+                    environments.append(env_dir.name)
 
         return sorted(environments)
 
-    def create_environment(
-        self, environment: str, template: str = "dev", custom_vars: Optional[Dict[str, str]] = None
-    ) -> bool:
+    def _has_environment_files(self, env_dir: Path) -> bool:
+        """Check if directory contains environment files.
+        
+        Args:
+            env_dir: Directory to check
+            
+        Returns:
+            True if environment files exist
+        """
+        env_name = env_dir.name
+        
+        # Look for .env.{environment} file
+        env_file_patterns = [
+            f".env.{env_name}",
+            f".env.{env_name.replace('-', '_')}",
+            f".env.{env_name.replace('_', '-')}",
+        ]
+        
+        for pattern in env_file_patterns:
+            if (env_dir / pattern).exists():
+                return True
+        
+        return False
+
+    def get_environment_files(self, environment: str) -> Dict[str, Optional[Path]]:
+        """Get the file paths for an environment.
+        
+        Args:
+            environment: Name of the environment
+            
+        Returns:
+            Dictionary with env_file, compose_file, and env_dir paths
+        """
+        env_dir = self.environments_dir / environment
+        
+        if not env_dir.exists():
+            return {
+                "env_file": None,
+                "compose_file": None,
+                "env_dir": env_dir
+            }
+        
+        # Look for .env files
+        env_file_patterns = [
+            f".env.{environment}",
+            f".env.{environment.replace('-', '_')}",
+            f".env.{environment.replace('_', '-')}",
+        ]
+        
+        # Look for docker-compose files
+        compose_file_patterns = [
+            f"docker-compose.{environment}.yml",
+            f"docker-compose.{environment.replace('-', '_')}.yml",
+            f"docker-compose.{environment.replace('_', '-')}.yml",
+        ]
+        
+        env_file = None
+        compose_file = None
+        
+        for pattern in env_file_patterns:
+            candidate = env_dir / pattern
+            if candidate.exists():
+                env_file = candidate
+                break
+        
+        for pattern in compose_file_patterns:
+            candidate = env_dir / pattern
+            if candidate.exists():
+                compose_file = candidate
+                break
+        
+        return {
+            "env_file": env_file,
+            "compose_file": compose_file,
+            "env_dir": env_dir
+        }
+
+    def create_environment(self, environment: str, template: str = "dev", custom_vars: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """Create a new environment based on a template.
 
         Args:
@@ -55,392 +135,314 @@ class EnvironmentManager:
             custom_vars: Custom environment variables to override
 
         Returns:
-            True if creation was successful, False otherwise
+            Dictionary with success status and message
         """
         logger.info(f"Creating environment '{environment}' from template '{template}'")
-
+        
         try:
-            # Check if environment already exists
-            if environment in self.list_environments():
-                logger.warning(f"Environment '{environment}' already exists")
-                return False
-
-            # Copy template environment file
-            template_file = self.project_dir / f".env.{template}"
-            if not template_file.exists():
-                logger.error(f"Template environment file not found: {template_file}")
-                return False
-
-            new_env_file = self.project_dir / f".env.{environment}"
-
-            # Read template and apply customizations
-            with template_file.open() as f:
-                template_content = f.read()
-
-            # Apply custom variables if provided
-            if custom_vars:
-                for key, value in custom_vars.items():
-                    # Replace existing variable or add new one
-                    if f"{key}=" in template_content:
-                        # Replace existing variable
-                        import re
-
-                        pattern = rf"^{key}=.*$"
-                        template_content = re.sub(pattern, f"{key}={value}", template_content, flags=re.MULTILINE)
-                    else:
-                        # Add new variable
-                        template_content += f"\n{key}={value}\n"
-
+            # Create environment directory
+            env_dir = self.environments_dir / environment
+            env_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Copy template files
+            template_files = self.get_environment_files(template)
+            
+            if not template_files["env_file"]:
+                return {
+                    "success": False,
+                    "message": f"Template environment '{template}' not found"
+                }
+            
+            # Copy and modify .env file
+            new_env_file = env_dir / f".env.{environment}"
+            template_content = template_files["env_file"].read_text()
+            
             # Update environment name
             if "ENVIRONMENT=" in template_content:
                 import re
-
                 template_content = re.sub(
                     r"^ENVIRONMENT=.*$", f"ENVIRONMENT={environment}", template_content, flags=re.MULTILINE
                 )
             else:
                 template_content += f"\nENVIRONMENT={environment}\n"
-
-            # Write new environment file
-            with new_env_file.open("w") as f:
-                f.write(template_content)
-
+            
+            # Apply custom variables
+            if custom_vars:
+                for key, value in custom_vars.items():
+                    if f"{key}=" in template_content:
+                        import re
+                        template_content = re.sub(
+                            rf"^{key}=.*$", f"{key}={value}", template_content, flags=re.MULTILINE
+                        )
+                    else:
+                        template_content += f"\n{key}={value}\n"
+            
+            new_env_file.write_text(template_content)
+            
+            # Copy docker-compose file if it exists
+            if template_files["compose_file"]:
+                new_compose_file = env_dir / f"docker-compose.{environment}.yml"
+                compose_content = template_files["compose_file"].read_text()
+                
+                # Update compose project name and environment references
+                compose_content = compose_content.replace(template, environment)
+                new_compose_file.write_text(compose_content)
+            
             logger.info(f"Environment '{environment}' created successfully")
-            return True
-
+            return {
+                "success": True,
+                "message": f"Environment '{environment}' created successfully"
+            }
+            
         except Exception as e:
             logger.error(f"Failed to create environment '{environment}': {e}")
-            return False
+            return {
+                "success": False,
+                "message": f"Failed to create environment '{environment}': {e}"
+            }
 
-    def start_environment(
-        self, environment: str, services: Optional[List[str]] = None, wait_for_health: bool = True, timeout: int = 300
-    ) -> bool:
+    def start_environment(self, environment: str, services: Optional[List[str]] = None, 
+                         wait_for_health: bool = True, timeout: int = 300) -> Dict[str, Any]:
         """Start an environment.
 
         Args:
-            environment: Environment name
-            services: List of specific services to start (None for all)
-            wait_for_health: Whether to wait for services to be healthy
-            timeout: Maximum time to wait for startup
+            environment: Name of the environment to start
+            services: Specific services to start (optional)
+            wait_for_health: Whether to wait for health checks
+            timeout: Timeout in seconds
 
         Returns:
-            True if startup was successful, False otherwise
+            Dictionary with success status and message
         """
         logger.info(f"Starting environment '{environment}'")
-
+        
+        files = self.get_environment_files(environment)
+        
+        if not files["env_file"]:
+            return {
+                "success": False,
+                "message": f"Environment '{environment}' files not found"
+            }
+        
         try:
-            # Load environment configuration
-            env_config = self.config.load_environment(environment)
-
-            # Build compose command
-            cmd = self._build_compose_command(environment)
-
-            # Start volume setup first if needed
-            if "volume-setup" in env_config["service_configs"]:
-                logger.info("Running volume setup...")
-                volume_cmd = cmd + ["up", "-d", "volume-setup"]
-                result = subprocess.run(volume_cmd, cwd=self.project_dir, capture_output=True, text=True)
-
-                if result.returncode != 0:
-                    logger.error(f"Volume setup failed: {result.stderr}")
-                    return False
-
-                # Wait for volume setup to complete
-                time.sleep(10)
-
-                # Stop volume setup container
-                stop_cmd = cmd + ["stop", "volume-setup"]
-                subprocess.run(stop_cmd, cwd=self.project_dir, capture_output=True, text=True)
-
-            # Start main services
-            start_cmd = cmd + ["up", "-d"]
+            # Build the docker-compose command
+            cmd = ["docker", "compose"]
+            
+            # Add env file
+            cmd.extend(["--env-file", str(files["env_file"].resolve())])
+            
+            # Add compose file
+            if files["compose_file"]:
+                cmd.extend(["-f", str(files["compose_file"].resolve())])
+            else:
+                # Use default compose file in project root
+                default_compose = self.project_dir / "docker-compose.yml"
+                if default_compose.exists():
+                    cmd.extend(["-f", str(default_compose.resolve())])
+            
+            # Add services
+            cmd.extend(["up", "-d"])
             if services:
-                start_cmd.extend(services)
-
-            result = subprocess.run(start_cmd, cwd=self.project_dir, capture_output=True, text=True, timeout=timeout)
-
-            if result.returncode != 0:
+                cmd.extend(services)
+            
+            # Execute command from environment directory
+            result = subprocess.run(
+                cmd, 
+                cwd=str(files["env_dir"].resolve()),
+                capture_output=True, 
+                text=True, 
+                timeout=timeout
+            )
+            
+            if result.returncode == 0:
+                logger.info(f"Environment '{environment}' started successfully")
+                return {
+                    "success": True,
+                    "message": f"Environment '{environment}' started successfully"
+                }
+            else:
                 logger.error(f"Failed to start environment '{environment}': {result.stderr}")
-                return False
-
-            # Wait for services to be healthy
-            if wait_for_health:
-                if not self._wait_for_services_healthy(environment, timeout):
-                    logger.error(f"Services in environment '{environment}' did not become healthy")
-                    return False
-
-            # Track active environment
-            self.active_environments[environment] = {
-                "started_at": time.time(),
-                "services": services or list(env_config["service_configs"].keys()),
+                return {
+                    "success": False,
+                    "message": f"Failed to start environment '{environment}': {result.stderr}"
+                }
+                
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "message": f"Timeout starting environment '{environment}' after {timeout} seconds"
+            }
+        except Exception as e:
+            logger.error(f"Error starting environment '{environment}': {e}")
+            return {
+                "success": False,
+                "message": f"Error starting environment '{environment}': {e}"
             }
 
-            logger.info(f"Environment '{environment}' started successfully")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to start environment '{environment}': {e}")
-            return False
-
-    def stop_environment(self, environment: str, remove_volumes: bool = False) -> bool:
+    def stop_environment(self, environment: str, remove_volumes: bool = False) -> Dict[str, Any]:
         """Stop an environment.
 
         Args:
-            environment: Environment name
+            environment: Name of the environment to stop
             remove_volumes: Whether to remove volumes
 
         Returns:
-            True if stop was successful, False otherwise
+            Dictionary with success status and message
         """
         logger.info(f"Stopping environment '{environment}'")
-
+        
+        files = self.get_environment_files(environment)
+        
+        if not files["env_file"]:
+            return {
+                "success": False,
+                "message": f"Environment '{environment}' files not found"
+            }
+        
         try:
-            cmd = self._build_compose_command(environment)
-
-            # Build stop command
-            stop_cmd = cmd + ["down"]
+            # Build the docker-compose command
+            cmd = ["docker", "compose"]
+            
+            # Add env file
+            cmd.extend(["--env-file", str(files["env_file"].resolve())])
+            
+            # Add compose file
+            if files["compose_file"]:
+                cmd.extend(["-f", str(files["compose_file"].resolve())])
+            
+            # Add down command
+            cmd.append("down")
             if remove_volumes:
-                stop_cmd.extend(["-v", "--remove-orphans"])
-
-            result = subprocess.run(stop_cmd, cwd=self.project_dir, capture_output=True, text=True)
-
-            if result.returncode != 0:
+                cmd.append("-v")
+            
+            # Execute command from environment directory
+            result = subprocess.run(
+                cmd,
+                cwd=str(files["env_dir"].resolve()),
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            
+            if result.returncode == 0:
+                logger.info(f"Environment '{environment}' stopped successfully")
+                return {
+                    "success": True,
+                    "message": f"Environment '{environment}' stopped successfully"
+                }
+            else:
                 logger.error(f"Failed to stop environment '{environment}': {result.stderr}")
-                return False
-
-            # Remove from active environments
-            if environment in self.active_environments:
-                del self.active_environments[environment]
-
-            logger.info(f"Environment '{environment}' stopped successfully")
-            return True
-
+                return {
+                    "success": False,
+                    "message": f"Failed to stop environment '{environment}': {result.stderr}"
+                }
+                
         except Exception as e:
-            logger.error(f"Failed to stop environment '{environment}': {e}")
-            return False
+            logger.error(f"Error stopping environment '{environment}': {e}")
+            return {
+                "success": False,
+                "message": f"Error stopping environment '{environment}': {e}"
+            }
 
-    def remove_environment(self, environment: str, force: bool = False) -> bool:
-        """Remove an environment completely.
+    def cleanup_environment(self, environment: str) -> Dict[str, Any]:
+        """Clean up an environment completely.
 
         Args:
-            environment: Environment name
-            force: Force removal even if environment is running
+            environment: Name of the environment to clean up
 
         Returns:
-            True if removal was successful, False otherwise
+            Dictionary with success status and message
         """
-        logger.info(f"Removing environment '{environment}'")
-
-        try:
-            # Stop environment first if it's running
-            if environment in self.active_environments:
-                if not force:
-                    logger.error(f"Environment '{environment}' is running. Use force=True to stop and remove.")
-                    return False
-
-                if not self.stop_environment(environment, remove_volumes=True):
-                    logger.error(f"Failed to stop environment '{environment}' before removal")
-                    return False
-
-            # Remove environment file
-            env_file = self.project_dir / f".env.{environment}"
-            if env_file.exists():
-                env_file.unlink()
-                logger.info(f"Removed environment file: {env_file}")
-
-            # Remove environment-specific compose file if it exists
-            compose_file = self.project_dir / f"docker-compose.{environment}.yml"
-            if compose_file.exists():
-                compose_file.unlink()
-                logger.info(f"Removed compose override file: {compose_file}")
-
-            logger.info(f"Environment '{environment}' removed successfully")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to remove environment '{environment}': {e}")
-            return False
+        logger.info(f"Cleaning up environment '{environment}'")
+        
+        # First stop the environment with volume removal
+        stop_result = self.stop_environment(environment, remove_volumes=True)
+        
+        if not stop_result["success"]:
+            return stop_result
+        
+        return {
+            "success": True,
+            "message": f"Environment '{environment}' cleaned up successfully"
+        }
 
     def get_environment_status(self, environment: str) -> Dict[str, Any]:
         """Get the status of an environment.
 
         Args:
-            environment: Environment name
+            environment: Name of the environment
 
         Returns:
-            Dictionary containing environment status information
+            Dictionary with environment status information
         """
-        try:
-            cmd = self._build_compose_command(environment)
-            status_cmd = cmd + ["ps", "--format", "json"]
-
-            result = subprocess.run(status_cmd, cwd=self.project_dir, capture_output=True, text=True)
-
-            if result.returncode != 0:
-                return {"error": f"Failed to get status: {result.stderr}"}
-
-            import json
-
-            containers = []
-            for line in result.stdout.strip().split("\n"):
-                if line.strip():
-                    containers.append(json.loads(line))
-
-            # Parse container information
-            services = {}
-            for container in containers:
-                service_name = container.get("Service", "unknown")
-                services[service_name] = {
-                    "state": container.get("State", "unknown"),
-                    "health": container.get("Health", "unknown"),
-                    "ports": container.get("Ports", []),
-                    "created": container.get("CreatedAt", ""),
-                    "image": container.get("Image", ""),
-                    "container_name": container.get("Names", ""),
-                }
-
+        files = self.get_environment_files(environment)
+        
+        if not files["env_file"]:
             return {
+                "error": f"Environment '{environment}' not found",
                 "environment": environment,
-                "active": environment in self.active_environments,
-                "services": services,
-                "service_count": len(services),
-                "healthy_services": sum(
-                    1 for s in services.values() if s["health"] == "healthy" or s["state"] == "running"
-                ),
+                "active": False
+            }
+        
+        try:
+            # Build the docker-compose command
+            cmd = ["docker", "compose"]
+            
+            # Add env file
+            cmd.extend(["--env-file", str(files["env_file"].resolve())])
+            
+            # Add compose file
+            if files["compose_file"]:
+                cmd.extend(["-f", str(files["compose_file"].resolve())])
+            
+            # Get status
+            cmd.extend(["ps", "--format", "json"])
+            
+            # Execute command from environment directory
+            result = subprocess.run(
+                cmd,
+                cwd=str(files["env_dir"].resolve()),
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                import json
+                services = []
+                if result.stdout.strip():
+                    for line in result.stdout.strip().split('\n'):
+                        if line.strip():
+                            services.append(json.loads(line))
+                
+                active = len(services) > 0
+                service_count = len(services)
+                healthy_services = sum(1 for s in services if s.get("Health", "").lower() == "healthy")
+                
+                return {
+                    "environment": environment,
+                    "active": active,
+                    "service_count": service_count,
+                    "healthy_services": healthy_services,
+                    "services": {s["Name"]: {"state": s["State"], "health": s.get("Health", "unknown")} for s in services}
+                }
+            else:
+                return {
+                    "environment": environment,
+                    "active": False,
+                    "service_count": 0,
+                    "healthy_services": 0,
+                    "services": {}
+                }
+                
+        except Exception as e:
+            logger.error(f"Error getting status for environment '{environment}': {e}")
+            return {
+                "error": f"Error getting status: {e}",
+                "environment": environment,
+                "active": False
             }
 
-        except Exception as e:
-            return {"error": f"Failed to get environment status: {e}"}
 
-    def restart_environment(self, environment: str, services: Optional[List[str]] = None) -> bool:
-        """Restart an environment or specific services.
-
-        Args:
-            environment: Environment name
-            services: List of specific services to restart (None for all)
-
-        Returns:
-            True if restart was successful, False otherwise
-        """
-        logger.info(f"Restarting environment '{environment}'")
-
-        try:
-            cmd = self._build_compose_command(environment)
-            restart_cmd = cmd + ["restart"]
-
-            if services:
-                restart_cmd.extend(services)
-
-            result = subprocess.run(restart_cmd, cwd=self.project_dir, capture_output=True, text=True)
-
-            if result.returncode != 0:
-                logger.error(f"Failed to restart environment '{environment}': {result.stderr}")
-                return False
-
-            logger.info(f"Environment '{environment}' restarted successfully")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to restart environment '{environment}': {e}")
-            return False
-
-    def execute_in_service(self, environment: str, service: str, command: List[str]) -> subprocess.CompletedProcess:
-        """Execute a command in a service container.
-
-        Args:
-            environment: Environment name
-            service: Service name
-            command: Command to execute
-
-        Returns:
-            CompletedProcess with execution results
-        """
-        cmd = self._build_compose_command(environment)
-        exec_cmd = cmd + ["exec", service] + command
-
-        return subprocess.run(exec_cmd, cwd=self.project_dir, capture_output=True, text=True)
-
-    def get_service_logs(self, environment: str, service: str, lines: int = 50) -> str:
-        """Get logs from a service.
-
-        Args:
-            environment: Environment name
-            service: Service name
-            lines: Number of lines to retrieve
-
-        Returns:
-            Service logs as string
-        """
-        cmd = self._build_compose_command(environment)
-        logs_cmd = cmd + ["logs", "--tail", str(lines), service]
-
-        result = subprocess.run(logs_cmd, cwd=self.project_dir, capture_output=True, text=True)
-
-        if result.returncode == 0:
-            return result.stdout
-        return f"Error getting logs: {result.stderr}"
-
-    def _build_compose_command(self, environment: str) -> List[str]:
-        """Build the docker compose command for an environment.
-
-        Args:
-            environment: Environment name
-
-        Returns:
-            List of command parts
-        """
-        env_file = self.project_dir / f".env.{environment}"
-        compose_file = self.project_dir / "docker-compose.yml"
-        override_file = self.project_dir / f"docker-compose.{environment}.yml"
-
-        cmd = ["docker", "compose", "--env-file", str(env_file), "-f", str(compose_file)]
-
-        if override_file.exists():
-            cmd.extend(["-f", str(override_file)])
-
-        return cmd
-
-    def _wait_for_services_healthy(self, environment: str, timeout: int = 300) -> bool:
-        """Wait for services to become healthy.
-
-        Args:
-            environment: Environment name
-            timeout: Maximum time to wait
-
-        Returns:
-            True if all services are healthy, False otherwise
-        """
-        start_time = time.time()
-
-        while time.time() - start_time < timeout:
-            status = self.get_environment_status(environment)
-
-            if "error" in status:
-                logger.debug(f"Status check error: {status['error']}")
-                time.sleep(5)
-                continue
-
-            services = status.get("services", {})
-            if not services:
-                logger.debug("No services found")
-                time.sleep(5)
-                continue
-
-            # Check if all services are healthy or running
-            healthy_count = 0
-            for service_name, service_info in services.items():
-                state = service_info.get("state", "")
-                health = service_info.get("health", "")
-
-                if state == "running" and (health == "healthy" or health == "unknown"):
-                    healthy_count += 1
-
-            if healthy_count == len(services):
-                logger.info(f"All {len(services)} services are healthy")
-                return True
-
-            logger.debug(f"Waiting for services to be healthy: {healthy_count}/{len(services)}")
-            time.sleep(5)
-
-        logger.error(f"Services did not become healthy within {timeout} seconds")
-        return False
+# Maintain backward compatibility
+EnvironmentManager = UnifiedEnvironmentManager

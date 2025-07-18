@@ -43,23 +43,29 @@ class EnvironmentConfig:
         """
         logger.info(f"Loading environment configuration for: {environment}")
 
-        # Load environment variables from .env file
-        env_file = self.project_dir / f".env.{environment}"
+        # Try to find environment file in new directory structure first
+        env_file = self.project_dir / "environments" / environment / f".env.{environment}"
         if not env_file.exists():
-            msg = f"Environment file not found: {env_file}"
-            raise FileNotFoundError(msg)
+            # Fall back to old flat structure
+            env_file = self.project_dir / f".env.{environment}"
+            if not env_file.exists():
+                msg = f"Environment file not found: {env_file}"
+                raise FileNotFoundError(msg)
 
         self.env_vars = self._parse_env_file(env_file)
 
-        # Load docker-compose configuration
-        compose_file = self.project_dir / "docker-compose.yml"
+        # Try to find compose file in new directory structure first
+        compose_file = self.project_dir / "environments" / environment / f"docker-compose.{environment}.yml"
         if not compose_file.exists():
-            msg = f"Docker compose file not found: {compose_file}"
-            raise FileNotFoundError(msg)
+            # Fall back to main docker-compose.yml
+            compose_file = self.project_dir / "docker-compose.yml"
+            if not compose_file.exists():
+                msg = f"Docker compose file not found: {compose_file}"
+                raise FileNotFoundError(msg)
 
         self.compose_config = self._parse_compose_file(compose_file)
 
-        # Load environment-specific overrides
+        # Load environment-specific overrides (old structure)
         override_file = self.project_dir / f"docker-compose.{environment}.yml"
         if override_file.exists():
             override_config = self._parse_compose_file(override_file)
@@ -100,6 +106,10 @@ class EnvironmentConfig:
                         key, value = line.split("=", 1)
                         key = key.strip()
                         value = value.strip()
+
+                        # Remove inline comments (everything after #)
+                        if "#" in value:
+                            value = value.split("#")[0].strip()
 
                         # Remove quotes if present
                         if (

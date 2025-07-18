@@ -1,0 +1,178 @@
+{
+  "health_checks": {
+    "postgres": {
+      "command": "pg_isready",
+      "expected_response": "accepting connections",
+      "timeout": 5,
+      "retries": 5,
+      "start_period": 30,
+      "interval": 10,
+      "test_queries": [
+        "SELECT 1",
+        "SELECT version()",
+        "SELECT current_database()"
+      ]
+    },
+    "apache": {
+      "command": "curl -f http://localhost/health",
+      "expected_response": "HTTP/1.1 200",
+      "timeout": 10,
+      "retries": 3,
+      "start_period": 60,
+      "interval": 30,
+      "test_urls": [
+        "http://localhost/health"
+      ]
+    },
+    "mail": {
+      "command": "nc -z localhost 25 && nc -z localhost 143",
+      "expected_response": "Connection succeeded",
+      "timeout": 10,
+      "retries": 3,
+      "start_period": 60,
+      "interval": 30,
+      "test_ports": [25, 143, 465, 587, 993],
+      "test_commands": [
+        "nc -z localhost 25",
+        "nc -z localhost 143"
+      ]
+    },
+    "bind": {
+      "command": "dig @localhost -p 53 . NS +short || nc -zv localhost 53",
+      "expected_response": "NS record returned or connection succeeded",
+      "timeout": 10,
+      "retries": 3,
+      "start_period": 60,
+      "interval": 30,
+      "test_queries": [
+        "dig @localhost . NS +short",
+        "nc -zv localhost 53"
+      ]
+    },
+    "flyway": {
+      "command": "flyway info",
+      "expected_response": "Migration info displayed",
+      "timeout": 60,
+      "retries": 1,
+      "start_period": 0,
+      "interval": 0,
+      "run_once": true,
+      "test_commands": [
+        "flyway info",
+        "flyway validate"
+      ]
+    },
+    "volume-setup": {
+      "command": "ls /data/logs/.volume-setup-complete",
+      "expected_response": "File exists",
+      "timeout": 30,
+      "retries": 1,
+      "start_period": 0,
+      "interval": 0,
+      "run_once": true,
+      "test_commands": [
+        "ls /data/logs/.volume-setup-complete",
+        "ls /data/certificates/.certificate-setup-complete"
+      ]
+    }
+  },
+  "environment_health_checks": {
+    "test-env-1": {
+      "postgres": {
+        "external_port": 5001,
+        "test_command": "pg_isready -h localhost -p 5001"
+      },
+      "apache": {
+        "external_port": 8001,
+        "test_command": "curl -f http://localhost:8001/health"
+      },
+      "mail": {
+        "external_ports": [2501, 1401],
+        "test_command": "nc -z localhost 2501 && nc -z localhost 1401"
+      },
+      "bind": {
+        "external_port": 5301,
+        "test_command": "dig @localhost -p 5301 test-env-1.local +short || nc -zv localhost 5301"
+      }
+    },
+    "test-env-2": {
+      "postgres": {
+        "external_port": 5002,
+        "test_command": "pg_isready -h localhost -p 5002"
+      },
+      "apache": {
+        "external_port": 8002,
+        "test_command": "curl -f http://localhost:8002/health"
+      },
+      "mail": {
+        "external_ports": [2502, 1402],
+        "test_command": "nc -z localhost 2502 && nc -z localhost 1402"
+      },
+      "bind": {
+        "external_port": 5302,
+        "test_command": "dig @localhost -p 5302 test-env-2.local +short || nc -zv localhost 5302"
+      }
+    }
+  },
+  "startup_timeouts": {
+    "test-env-1": {
+      "volume-setup": 30,
+      "postgres": 30,
+      "flyway": 60,
+      "apache": 60,
+      "mail": 60,
+      "bind": 60,
+      "total": 180
+    },
+    "test-env-2": {
+      "volume-setup": 30,
+      "postgres": 30,
+      "flyway": 60,
+      "apache": 60,
+      "mail": 60,
+      "bind": 60,
+      "total": 180
+    }
+  },
+  "dependency_chains": {
+    "volume-setup": [],
+    "postgres": ["volume-setup"],
+    "flyway": ["postgres"],
+    "apache": ["postgres", "flyway"],
+    "mail": ["postgres", "flyway"],
+    "bind": ["postgres", "flyway"]
+  },
+  "health_check_endpoints": {
+    "apache": [
+      {
+        "url": "/health",
+        "expected_status": 200,
+        "expected_content": "OK"
+      }
+    ],
+    "mail": [
+      {
+        "protocol": "SMTP",
+        "port": 25,
+        "test": "EHLO test-env-1.local"
+      },
+      {
+        "protocol": "IMAP",
+        "port": 143,
+        "test": "a001 CAPABILITY"
+      }
+    ]
+  },
+  "performance_baselines": {
+    "test-env-1": {
+      "startup_time": 180,
+      "memory_usage": "2GB",
+      "cpu_usage": "2.0 cores"
+    },
+    "test-env-2": {
+      "startup_time": 180,
+      "memory_usage": "2GB",
+      "cpu_usage": "2.0 cores"
+    }
+  }
+}

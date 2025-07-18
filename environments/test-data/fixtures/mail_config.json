@@ -1,0 +1,209 @@
+{
+  "mail_domains": {
+    "test-env-1.local": {
+      "description": "Full-stack test environment 1 mail domain",
+      "mx_priority": 10,
+      "mail_server": "mail.test-env-1.local",
+      "supported_protocols": ["SMTP", "IMAP", "IMAPS", "SMTPS"],
+      "security": {
+        "tls_enabled": false,
+        "ssl_enabled": false,
+        "starttls_enabled": false,
+        "auth_required": true
+      },
+      "aliases": [
+        {
+          "alias": "admin@test-env-1.local",
+          "destination": "admin@test-env-1.local"
+        },
+        {
+          "alias": "webmaster@test-env-1.local",
+          "destination": "admin@test-env-1.local"
+        },
+        {
+          "alias": "postmaster@test-env-1.local",
+          "destination": "admin@test-env-1.local"
+        }
+      ],
+      "mailboxes": [
+        {
+          "username": "admin",
+          "domain": "test-env-1.local",
+          "password": "admin_test_env_1_123",
+          "quota": "1GB",
+          "active": true
+        },
+        {
+          "username": "test",
+          "domain": "test-env-1.local",
+          "password": "test_env_1_123",
+          "quota": "500MB",
+          "active": true
+        }
+      ]
+    },
+    "test-env-2.local": {
+      "description": "Full-stack test environment 2 mail domain",
+      "mx_priority": 10,
+      "mail_server": "mail.test-env-2.local",
+      "supported_protocols": ["SMTP", "IMAP", "IMAPS", "SMTPS"],
+      "security": {
+        "tls_enabled": false,
+        "ssl_enabled": false,
+        "starttls_enabled": false,
+        "auth_required": true
+      },
+      "aliases": [
+        {
+          "alias": "admin@test-env-2.local",
+          "destination": "admin@test-env-2.local"
+        },
+        {
+          "alias": "webmaster@test-env-2.local",
+          "destination": "admin@test-env-2.local"
+        },
+        {
+          "alias": "postmaster@test-env-2.local",
+          "destination": "admin@test-env-2.local"
+        }
+      ],
+      "mailboxes": [
+        {
+          "username": "admin",
+          "domain": "test-env-2.local",
+          "password": "admin_test_env_2_123",
+          "quota": "1GB",
+          "active": true
+        },
+        {
+          "username": "test",
+          "domain": "test-env-2.local",
+          "password": "test_env_2_123",
+          "quota": "500MB",
+          "active": true
+        }
+      ]
+    }
+  },
+  "test_scenarios": {
+    "smtp_tests": {
+      "basic_send": [
+        {
+          "from": "admin@test-env-1.local",
+          "to": "test@test-env-1.local",
+          "subject": "Test Email 1",
+          "body": "This is a test email for SMTP functionality.",
+          "expected_result": "delivered"
+        },
+        {
+          "from": "admin@test-env-2.local",
+          "to": "test@test-env-2.local",
+          "subject": "Test Email 2",
+          "body": "This is a test email for SMTP functionality.",
+          "expected_result": "delivered"
+        }
+      ],
+      "authentication_tests": [
+        {
+          "username": "admin@test-env-1.local",
+          "password": "admin_test_env_1_123",
+          "expected_result": "authenticated"
+        },
+        {
+          "username": "admin@test-env-2.local",
+          "password": "admin_test_env_2_123",
+          "expected_result": "authenticated"
+        },
+        {
+          "username": "admin@test-env-1.local",
+          "password": "wrong_password",
+          "expected_result": "authentication_failed"
+        }
+      ]
+    },
+    "imap_tests": {
+      "connection_tests": [
+        {
+          "username": "admin@test-env-1.local",
+          "password": "admin_test_env_1_123",
+          "expected_result": "connected"
+        },
+        {
+          "username": "admin@test-env-2.local",
+          "password": "admin_test_env_2_123",
+          "expected_result": "connected"
+        }
+      ],
+      "mailbox_operations": [
+        {
+          "operation": "LIST",
+          "expected_folders": ["INBOX", "Sent", "Drafts", "Trash"]
+        },
+        {
+          "operation": "SELECT",
+          "folder": "INBOX",
+          "expected_result": "selected"
+        },
+        {
+          "operation": "FETCH",
+          "message_set": "1:*",
+          "expected_result": "messages_fetched"
+        }
+      ]
+    }
+  },
+  "test_messages": {
+    "basic_text": {
+      "subject": "Basic Test Message",
+      "body": "This is a basic text message for testing mail functionality.",
+      "content_type": "text/plain"
+    },
+    "html_message": {
+      "subject": "HTML Test Message",
+      "body": "<html><body><h1>Test HTML Message</h1><p>This is an HTML test message.</p></body></html>",
+      "content_type": "text/html"
+    }
+  },
+  "server_configuration": {
+    "postfix": {
+      "main_cf": {
+        "myhostname": "mail.test-env-1.local",
+        "mydomain": "test-env-1.local",
+        "myorigin": "$mydomain",
+        "inet_interfaces": "all",
+        "mydestination": "$myhostname, $mydomain, localhost",
+        "home_mailbox": "Maildir/",
+        "smtpd_banner": "$myhostname ESMTP",
+        "smtpd_tls_security_level": "none",
+        "smtpd_sasl_auth_enable": "yes",
+        "smtpd_sasl_type": "dovecot",
+        "smtpd_sasl_path": "private/auth"
+      },
+      "master_cf": {
+        "smtp": "inet n - y - - smtpd",
+        "submission": "inet n - y - - smtpd -o syslog_name=postfix/submission",
+        "smtps": "inet n - y - - smtpd -o syslog_name=postfix/smtps"
+      }
+    },
+    "dovecot": {
+      "dovecot_conf": {
+        "protocols": "imap pop3 lmtp",
+        "mail_location": "maildir:~/Maildir",
+        "userdb": "passwd",
+        "passdb": "pam",
+        "ssl": "no"
+      },
+      "conf_d": {
+        "10_mail": {
+          "mail_location": "maildir:~/Maildir",
+          "mail_privileged_group": "mail"
+        },
+        "10_auth": {
+          "auth_mechanisms": "plain login",
+          "passdb": "driver:pam",
+          "userdb": "driver:passwd"
+        }
+      }
+    }
+  }
+}

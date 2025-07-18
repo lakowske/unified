@@ -171,8 +171,8 @@ while [ $attempt -lt $max_attempts ]; do
     fi
 
     attempt=$((attempt + 1))
-    echo "Attempt $attempt/$max_attempts: Database not ready, waiting 2 seconds..."
-    sleep 2
+    echo "Attempt $attempt/$max_attempts: Database not ready, waiting 0.5 seconds..."
+    sleep 0.5
 done
 
 if [ $attempt -eq $max_attempts ]; then

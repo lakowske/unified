@@ -44,7 +44,29 @@ This document tracks significant issues, roadblocks, and solutions encountered d
 
 **Impact**: DNS service now stable and secure, resolving domains correctly
 
-### 3. Podman Compose vs Docker Compose Compatibility (July 2025)
+### 3. Test Data System Cleanup & Standardization (July 2025)
+
+**Issue**: Test data system had obsolete artifacts and inconsistent references from multiple development iterations
+
+- Validation data contained references to non-existent environments (fullstack.test.local, feature-auth.test.local)
+- Test fixtures included obsolete services (redis, prometheus, grafana)
+- README documentation was outdated and confusing
+- Integration tests only checked basic postgres connectivity instead of full service stack
+- Test artifacts from multiple development phases created confusion
+
+**Root Cause**: Rapid development cycles led to accumulation of obsolete test data and documentation
+
+**Solution**: Comprehensive cleanup and standardization
+
+- Cleaned up all validation data files to only include current test-env-1 and test-env-2 environments
+- Updated integration tests to validate full service stack (postgres, apache, mail, dns)
+- Simplified test environments to 2 comprehensive full-stack environments with proper port isolation
+- Updated README documentation to reflect actual current structure
+- Verified all tests pass with cleaned-up code and data
+
+**Impact**: Clear, maintainable test system that accurately reflects current infrastructure
+
+### 4. Podman Compose vs Docker Compose Compatibility (July 2025)
 
 **Issue**: Init container dependencies not working properly with podman-compose
 

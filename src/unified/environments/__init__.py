@@ -9,12 +9,13 @@ This package provides comprehensive environment management capabilities includin
 
 from .config import EnvironmentConfig
 from .isolation import EnvironmentIsolation
-from .manager import EnvironmentManager
+from .manager import EnvironmentManager, UnifiedEnvironmentManager
 from .network import NetworkInfo
 
 __all__ = [
     "EnvironmentConfig",
     "EnvironmentManager",
+    "UnifiedEnvironmentManager",
     "NetworkInfo",
     "EnvironmentIsolation",
 ]

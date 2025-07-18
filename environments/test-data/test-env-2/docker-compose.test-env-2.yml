@@ -1,0 +1,229 @@
+# Docker Compose - Full Stack Test Environment 2
+# Contains all services: volume-setup, postgres, apache, mail, dns, flyway
+version: '3.8'
+
+services:
+  volume-setup:
+    image: localhost/unified/volume-setup:latest
+    container_name: volume-setup-test-env-2
+    environment:
+      ENVIRONMENT: test-env-2
+    volumes:
+      - logs-test-env-2:/data/logs
+      - certificates-test-env-2:/data/certificates
+      - mail-data-test-env-2:/var/mail
+      - bind-zones-test-env-2:/data/dns/zones
+      - postgres-data-test-env-2:/data/postgres/data
+    restart: "no"
+
+  postgres:
+    image: localhost/unified/postgres:latest
+    container_name: postgres-test-env-2
+    depends_on:
+      - volume-setup
+    environment:
+      POSTGRES_DB: unified_test_env_2
+      POSTGRES_USER: test_user_2
+      POSTGRES_PASSWORD: test_pass_2
+      POSTGRES_HOST_AUTH_METHOD: trust
+      PGDATA: /data/postgres/data
+      POSTGRES_INITDB_ARGS: "--auth-host=trust --auth-local=peer"
+      ENVIRONMENT: test-env-2
+      CONFIG_DIR: /data/config
+      CERT_PATH: /data/certificates
+      BASE_DIR: /data
+      LOG_DIR: /data/logs
+    ports:
+      - "5002:5432"
+    volumes:
+      - postgres-data-test-env-2:/data/postgres/data
+      - logs-test-env-2:/data/logs
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  flyway:
+    image: flyway/flyway:latest
+    container_name: flyway-test-env-2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/unified_test_env_2
+      FLYWAY_USER: test_user_2
+      FLYWAY_PASSWORD: test_pass_2
+      FLYWAY_SCHEMAS: unified
+    volumes:
+      - ./migrations:/flyway/sql:ro
+    command: ["migrate"]
+    restart: "no"
+
+  apache:
+    image: localhost/unified/apache:latest
+    container_name: apache-test-env-2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://test_user_2:test_pass_2@postgres:5432/unified_test_env_2
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: unified_test_env_2
+      DB_USER: test_user_2
+      DB_PASSWORD: test_pass_2
+
+      # Apache configuration
+      APACHE_SERVER_NAME: test-env-2.local
+      APACHE_SERVER_ADMIN: test@example.com
+      APACHE_LOG_LEVEL: debug
+      SSL_ENABLED: false
+      SSL_REDIRECT: false
+
+      # Environment info
+      ENVIRONMENT: test-env-2
+      CONFIG_DIR: /data/config
+      CERT_PATH: /data/certificates
+      BASE_DIR: /data
+      LOG_DIR: /data/logs
+
+      # Application settings
+      LOG_LEVEL: debug
+      DEBUG_MODE: true
+      APP_VERSION: test-env-2-latest
+    ports:
+      - "8002:80"
+      - "8402:443"
+    volumes:
+      - logs-test-env-2:/data/logs
+      - certificates-test-env-2:/data/certificates
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  mail:
+    image: localhost/unified/mail:latest
+    container_name: mail-test-env-2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://test_user_2:test_pass_2@postgres:5432/unified_test_env_2
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: unified_test_env_2
+      DB_USER: test_user_2
+      DB_PASSWORD: test_pass_2
+
+      # Environment info
+      ENVIRONMENT: test-env-2
+      CONFIG_DIR: /data/config
+      CERT_PATH: /data/certificates
+      BASE_DIR: /data
+      LOG_DIR: /data/logs
+
+      # Mail configuration
+      MAIL_DOMAIN: test-env-2.local
+      MAIL_LOG_LEVEL: debug
+      VMAIL_UID: 5002
+      VMAIL_GID: 5002
+
+      # SSL settings
+      SSL_ENABLED: false
+      CERT_TYPE_PREFERENCE: ""
+
+      # Application settings
+      LOG_LEVEL: debug
+      DEBUG_MODE: true
+      APP_VERSION: test-env-2-latest
+      APP_NAME: "Unified Mail Server - Test Env 2"
+    ports:
+      - "2502:25"
+      - "1402:143"
+      - "9902:993"
+      - "4402:465"
+      - "5502:587"
+    volumes:
+      - mail-data-test-env-2:/var/mail
+      - logs-test-env-2:/data/logs
+      - certificates-test-env-2:/data/certificates
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 25 && nc -z localhost 143"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  bind:
+    image: localhost/unified/dns:latest
+    container_name: bind-test-env-2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    environment:
+      # Database connection
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: unified_test_env_2
+      DB_USER: test_user_2
+      DB_PASSWORD: test_pass_2
+
+      # Environment info
+      ENVIRONMENT: test-env-2
+      CONFIG_DIR: /data/config
+      CERT_PATH: /data/certificates
+      BASE_DIR: /data
+      LOG_DIR: /data/logs
+
+      # DNS configuration
+      DNS_LOG_LEVEL: info
+      DNS_FORWARDERS: 8.8.8.8;8.8.4.4;1.1.1.1;1.0.0.1
+      DNS_ALLOW_QUERY: any
+      DNS_RECURSION: yes
+      DNS_CACHE_SIZE: 50m
+      DNS_MAX_CACHE_TTL: 1800
+
+      # Mail domain settings
+      MAIL_DOMAIN: test-env-2.local
+      MAIL_SERVER_IP: 127.0.0.1
+    ports:
+      - "5302:53/udp"
+      - "5302:53/tcp"
+    volumes:
+      - bind-zones-test-env-2:/data/dns/zones
+      - logs-test-env-2:/data/logs
+    healthcheck:
+      test: ["CMD-SHELL", "dig @localhost test-env-2.local +short || nc -zv localhost 53"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  postgres-data-test-env-2:
+    name: postgres-data-test-env-2
+  logs-test-env-2:
+    name: logs-test-env-2
+  certificates-test-env-2:
+    name: certificates-test-env-2
+  mail-data-test-env-2:
+    name: mail-data-test-env-2
+  bind-zones-test-env-2:
+    name: bind-zones-test-env-2

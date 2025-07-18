@@ -64,18 +64,18 @@ if [ -d "$LOG_DIR" ]; then
     chown -R 9999:9999 "$LOG_DIR" || echo "Warning: Could not change ownership to 9999:9999"
     chmod -R 755 "$LOG_DIR" || echo "Warning: Could not change permissions"
 
-    # Set specific ownership for postgres logs (postgres user UID 101)
+    # Set specific ownership for postgres logs (postgres user UID 100)
     if [ -d "$LOG_DIR/postgres" ]; then
-        echo "Setting postgres log directory ownership for postgres user (UID 101)..."
-        chown -R 101:9999 "$LOG_DIR/postgres" || echo "Warning: Could not change postgres log ownership to 101:9999"
+        echo "Setting postgres log directory ownership for postgres user (UID 100)..."
+        chown -R 100:9999 "$LOG_DIR/postgres" || echo "Warning: Could not change postgres log ownership to 100:9999"
     fi
 fi
 
 # Set proper permissions for postgres data directory (idempotent)
 POSTGRES_DATA="/data/postgres/data"
 if [ -d "$POSTGRES_DATA" ]; then
-    echo "Setting postgres data directory ownership for postgres user (UID 101)..."
-    chown -R 101:103 "$POSTGRES_DATA" || echo "Warning: Could not change postgres data ownership to 101:103"
+    echo "Setting postgres data directory ownership for postgres user (UID 100)..."
+    chown -R 100:102 "$POSTGRES_DATA" || echo "Warning: Could not change postgres data ownership to 100:102"
     chmod 700 "$POSTGRES_DATA" || echo "Warning: Could not set postgres data directory permissions to 700"
 else
     echo "Postgres data volume not mounted at $POSTGRES_DATA, skipping postgres data directory setup"

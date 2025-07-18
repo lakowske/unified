@@ -1,0 +1,178 @@
+{
+  "startup_sequences": {
+    "test-env-1": {
+      "description": "Full-stack test environment 1 startup order",
+      "phases": [
+        {
+          "phase": 1,
+          "description": "Initialize volumes and setup",
+          "services": ["volume-setup"],
+          "parallel": false,
+          "timeout": 30
+        },
+        {
+          "phase": 2,
+          "description": "Start core database",
+          "services": ["postgres"],
+          "parallel": false,
+          "timeout": 30,
+          "wait_for_health": true,
+          "depends_on": ["volume-setup"]
+        },
+        {
+          "phase": 3,
+          "description": "Run database migrations",
+          "services": ["flyway"],
+          "parallel": false,
+          "timeout": 60,
+          "depends_on": ["postgres"]
+        },
+        {
+          "phase": 4,
+          "description": "Start application services",
+          "services": ["apache", "mail", "bind"],
+          "parallel": true,
+          "timeout": 60,
+          "depends_on": ["postgres", "flyway"],
+          "wait_for_health": true
+        }
+      ],
+      "total_startup_time": 180,
+      "critical_path": ["volume-setup", "postgres", "flyway", "mail"]
+    },
+    "test-env-2": {
+      "description": "Full-stack test environment 2 startup order",
+      "phases": [
+        {
+          "phase": 1,
+          "description": "Initialize volumes and setup",
+          "services": ["volume-setup"],
+          "parallel": false,
+          "timeout": 30
+        },
+        {
+          "phase": 2,
+          "description": "Start core database",
+          "services": ["postgres"],
+          "parallel": false,
+          "timeout": 30,
+          "wait_for_health": true,
+          "depends_on": ["volume-setup"]
+        },
+        {
+          "phase": 3,
+          "description": "Run database migrations",
+          "services": ["flyway"],
+          "parallel": false,
+          "timeout": 60,
+          "depends_on": ["postgres"]
+        },
+        {
+          "phase": 4,
+          "description": "Start application services",
+          "services": ["apache", "mail", "bind"],
+          "parallel": true,
+          "timeout": 60,
+          "depends_on": ["postgres", "flyway"],
+          "wait_for_health": true
+        }
+      ],
+      "total_startup_time": 180,
+      "critical_path": ["volume-setup", "postgres", "flyway", "mail"]
+    }
+  },
+  "shutdown_sequences": {
+    "graceful_shutdown": {
+      "description": "Graceful shutdown order (reverse of startup)",
+      "phases": [
+        {
+          "phase": 1,
+          "description": "Stop application services",
+          "services": ["apache", "mail", "bind"],
+          "parallel": true,
+          "timeout": 20
+        },
+        {
+          "phase": 2,
+          "description": "Stop database",
+          "services": ["postgres"],
+          "parallel": false,
+          "timeout": 15
+        }
+      ],
+      "total_shutdown_time": 35
+    },
+    "force_shutdown": {
+      "description": "Force shutdown all services",
+      "timeout": 30,
+      "method": "SIGKILL"
+    }
+  },
+  "dependency_validation": {
+    "postgres": {
+      "required_by": ["apache", "mail", "bind", "flyway"],
+      "depends_on": ["volume-setup"],
+      "must_start_before": ["apache", "mail", "bind", "flyway"],
+      "health_check_required": true
+    },
+    "flyway": {
+      "depends_on": ["postgres"],
+      "required_by": ["apache", "mail", "bind"],
+      "run_once": true,
+      "health_check_required": false
+    },
+    "volume-setup": {
+      "required_by": ["postgres", "apache", "mail", "bind"],
+      "run_once": true,
+      "must_run_first": true,
+      "health_check_required": false
+    },
+    "apache": {
+      "depends_on": ["postgres", "flyway"],
+      "health_check_required": true
+    },
+    "mail": {
+      "depends_on": ["postgres", "flyway"],
+      "health_check_required": true
+    },
+    "bind": {
+      "depends_on": ["postgres", "flyway"],
+      "health_check_required": true
+    }
+  },
+  "parallel_startup_rules": {
+    "independent_services": ["bind"],
+    "database_dependent": ["apache", "mail", "flyway"],
+    "max_parallel": 3,
+    "resource_constraints": {
+      "memory_intensive": ["postgres", "mail", "apache"],
+      "cpu_intensive": ["apache", "mail"],
+      "io_intensive": ["postgres", "bind"]
+    }
+  },
+  "health_check_sequence": {
+    "description": "Order in which to verify service health",
+    "sequence": [
+      {
+        "service": "postgres",
+        "wait_time": 10,
+        "max_attempts": 5
+      },
+      {
+        "service": "apache",
+        "wait_time": 10,
+        "max_attempts": 3
+      },
+      {
+        "service": "mail",
+        "wait_time": 15,
+        "max_attempts": 3
+      },
+      {
+        "service": "bind",
+        "wait_time": 5,
+        "max_attempts": 3
+      }
+    ]
+  }
+}

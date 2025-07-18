@@ -1,0 +1,83 @@
+{
+  "environments": {
+    "test-env-1": {
+      "description": "Full-stack test environment 1 with complete service suite",
+      "ports": {
+        "postgres": 5001,
+        "apache_http": 8001,
+        "apache_https": 8401,
+        "mail_smtp": 2501,
+        "mail_imap": 1401,
+        "mail_imaps": 9901,
+        "mail_smtps": 4401,
+        "mail_submission": 5501,
+        "dns_udp": 5301,
+        "dns_tcp": 5301
+      },
+      "services": ["volume-setup", "postgres", "apache", "mail", "bind", "flyway"],
+      "port_ranges": {
+        "start": 1401,
+        "end": 9901
+      }
+    },
+    "test-env-2": {
+      "description": "Full-stack test environment 2 with complete service suite, different ports",
+      "ports": {
+        "postgres": 5002,
+        "apache_http": 8002,
+        "apache_https": 8402,
+        "mail_smtp": 2502,
+        "mail_imap": 1402,
+        "mail_imaps": 9902,
+        "mail_smtps": 4402,
+        "mail_submission": 5502,
+        "dns_udp": 5302,
+        "dns_tcp": 5302
+      },
+      "services": ["volume-setup", "postgres", "apache", "mail", "bind", "flyway"],
+      "port_ranges": {
+        "start": 1402,
+        "end": 9902
+      }
+    }
+  },
+  "port_conflict_matrix": {
+    "test-env-1": ["none"],
+    "test-env-2": ["none"]
+  },
+  "service_health_checks": {
+    "test-env-1": {
+      "postgres": "pg_isready on localhost:5001",
+      "apache": "curl http://localhost:8001/health",
+      "mail": "nc -z localhost:2501 && nc -z localhost:1401",
+      "bind": "dig @localhost:5301 test-env-1.local || nc -zv localhost:5301"
+    },
+    "test-env-2": {
+      "postgres": "pg_isready on localhost:5002",
+      "apache": "curl http://localhost:8002/health",
+      "mail": "nc -z localhost:2502 && nc -z localhost:1402",
+      "bind": "dig @localhost:5302 test-env-2.local || nc -zv localhost:5302"
+    }
+  },
+  "test_scenarios": {
+    "isolated_startup": {
+      "description": "Each environment can start independently with full service stack",
+      "environments": ["test-env-1", "test-env-2"]
+    },
+    "parallel_startup": {
+      "description": "Non-conflicting environments can run simultaneously with full service stack",
+      "compatible_combinations": [
+        ["test-env-1", "test-env-2"]
+      ]
+    },
+    "service_integration": {
+      "description": "Services within each environment can communicate with each other",
+      "test_cases": [
+        "apache can connect to postgres",
+        "mail can connect to postgres",
+        "bind can connect to postgres",
+        "flyway can migrate postgres schema"
+      ]
+    }
+  }
+}

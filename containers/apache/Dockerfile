@@ -64,7 +64,7 @@ RUN chown -R www-data:www-data /var/www/unified
 EXPOSE 80 443
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=15s --timeout=2s --start-period=1s --retries=3 \
     CMD curl -f http://localhost:80/health || exit 1
 
 # Set entrypoint

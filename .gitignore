@@ -177,3 +177,7 @@ cython_debug/
 
 # Poststack temporary files
 *.processed
+
+# Performance test data and logs
+performance_data/
+logs/
