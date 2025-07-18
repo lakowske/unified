@@ -9,7 +9,6 @@ import json
 import logging
 import subprocess
 import threading
-import time
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class ContainerEvent:
     """Represents a Docker container event."""
-    
+
     def __init__(self, event_data: Dict[str, Any]):
         self.timestamp = datetime.now()
         self.action = event_data.get("Action", "")
@@ -26,7 +25,7 @@ class ContainerEvent:
         self.container_name = event_data.get("Actor", {}).get("Attributes", {}).get("name", "")
         self.image = event_data.get("Actor", {}).get("Attributes", {}).get("image", "")
         self.raw_data = event_data
-        
+
         # Parse event timestamp if available (prefer nanosecond precision)
         if "timeNano" in event_data:
             try:
@@ -39,20 +38,20 @@ class ContainerEvent:
                 self.timestamp = datetime.fromtimestamp(event_data["time"])
             except (ValueError, TypeError):
                 pass
-    
+
     def __str__(self) -> str:
         return f"ContainerEvent({self.action}, {self.container_name}, {self.timestamp})"
-    
+
     def __repr__(self) -> str:
         return self.__str__()
 
 
 class ContainerEventMonitor:
     """Monitors Docker events for container lifecycle tracking."""
-    
+
     def __init__(self, container_filters: Optional[List[str]] = None):
         """Initialize container event monitor.
-        
+
         Args:
             container_filters: List of container name patterns to monitor
         """
@@ -62,51 +61,48 @@ class ContainerEventMonitor:
         self.monitoring = False
         self.monitor_thread: Optional[threading.Thread] = None
         self.process: Optional[subprocess.Popen] = None
-        
+
         # Track containers we're interested in
         self.tracked_containers: Set[str] = set()
-        
+
         # Event type mapping
-        self.lifecycle_events = {
-            "create", "start", "restart", "stop", "kill", "die", "destroy",
-            "health_status"
-        }
-    
+        self.lifecycle_events = {"create", "start", "restart", "stop", "kill", "die", "destroy", "health_status"}
+
     def add_container_filter(self, container_name: str) -> None:
         """Add a container name pattern to monitor.
-        
+
         Args:
             container_name: Container name or pattern
         """
         self.container_filters.append(container_name)
         self.tracked_containers.add(container_name)
-    
+
     def add_event_callback(self, callback: Callable[[ContainerEvent], None]) -> None:
         """Add a callback function for container events.
-        
+
         Args:
             callback: Function to call when events occur
         """
         self.event_callbacks.append(callback)
-    
+
     def start_monitoring(self) -> None:
         """Start monitoring Docker events."""
         if self.monitoring:
             logger.warning("Event monitoring already started")
             return
-        
+
         self.monitoring = True
         self.monitor_thread = threading.Thread(target=self._monitor_events, daemon=True)
         self.monitor_thread.start()
         logger.info("Started Docker event monitoring")
-    
+
     def stop_monitoring(self) -> None:
         """Stop monitoring Docker events."""
         if not self.monitoring:
             return
-        
+
         self.monitoring = False
-        
+
         # Terminate the docker events process
         if self.process:
             try:
@@ -116,110 +112,110 @@ class ContainerEventMonitor:
                 self.process.kill()
             except Exception as e:
                 logger.warning(f"Error terminating docker events process: {e}")
-        
+
         # Wait for monitor thread to finish
         if self.monitor_thread:
             self.monitor_thread.join(timeout=5)
-        
+
         logger.info("Stopped Docker event monitoring")
-    
+
     def _monitor_events(self) -> None:
         """Monitor Docker events in a separate thread."""
         try:
             # Build docker events command
             cmd = ["docker", "events", "--format", "json"]
-            
+
             # Add container filters if specified
             if self.container_filters:
                 for container in self.container_filters:
                     cmd.extend(["--filter", f"container={container}"])
-            
+
             logger.info(f"Starting docker events monitoring with command: {' '.join(cmd)}")
-            
+
             # Start the process
             self.process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1  # Line buffered
+                bufsize=1,  # Line buffered
             )
-            
+
             # Read events line by line
             while self.monitoring and self.process.poll() is None:
                 try:
                     line = self.process.stdout.readline()
                     if not line:
                         break
-                    
+
                     # Parse event JSON
                     event_data = json.loads(line.strip())
-                    
+
                     # Filter for container events
                     if event_data.get("Type") == "container":
                         event = ContainerEvent(event_data)
-                        
+
                         # Check if this is a lifecycle event we care about
                         if event.action in self.lifecycle_events:
                             self._process_event(event)
-                
+
                 except json.JSONDecodeError as e:
                     logger.warning(f"Failed to parse event JSON: {e}")
                 except Exception as e:
                     logger.error(f"Error processing event: {e}")
-            
+
         except Exception as e:
             logger.error(f"Error in event monitoring thread: {e}")
         finally:
             if self.process:
                 self.process = None
-    
+
     def _process_event(self, event: ContainerEvent) -> None:
         """Process a container event.
-        
+
         Args:
             event: The container event to process
         """
         # Store the event
         self.events.append(event)
-        
+
         logger.debug(f"Captured Docker event: {event.action} for {event.container_name} at {event.timestamp}")
-        
+
         # Call registered callbacks
         for callback in self.event_callbacks:
             try:
                 callback(event)
             except Exception as e:
                 logger.error(f"Error in event callback: {e}")
-    
+
     def get_events_for_container(self, container_name: str) -> List[ContainerEvent]:
         """Get all events for a specific container.
-        
+
         Args:
             container_name: Name of the container
-            
+
         Returns:
             List of events for the container
         """
         return [event for event in self.events if event.container_name == container_name]
-    
+
     def get_events_by_action(self, action: str) -> List[ContainerEvent]:
         """Get all events with a specific action.
-        
+
         Args:
             action: The action to filter by
-            
+
         Returns:
             List of events with the specified action
         """
         return [event for event in self.events if event.action == action]
-    
+
     def get_lifecycle_timeline(self, container_name: str) -> Dict[str, Optional[datetime]]:
         """Get the lifecycle timeline for a container.
-        
+
         Args:
             container_name: Name of the container
-            
+
         Returns:
             Dictionary mapping lifecycle events to timestamps
         """
@@ -231,9 +227,9 @@ class ContainerEventMonitor:
             "health_status_healthy": None,
             "health_status_unhealthy": None,
             "stop": None,
-            "destroy": None
+            "destroy": None,
         }
-        
+
         for event in events:
             if event.action == "create":
                 timeline["create"] = event.timestamp
@@ -253,36 +249,36 @@ class ContainerEventMonitor:
                 timeline["stop"] = event.timestamp
             elif event.action == "destroy":
                 timeline["destroy"] = event.timestamp
-        
+
         return timeline
-    
+
     def calculate_startup_time(self, container_name: str) -> Optional[float]:
         """Calculate the startup time for a container.
-        
+
         Args:
             container_name: Name of the container
-            
+
         Returns:
             Startup time in seconds, or None if not calculable
         """
         timeline = self.get_lifecycle_timeline(container_name)
-        
+
         start_time = timeline.get("start")
         healthy_time = timeline.get("health_status_healthy")
-        
+
         if start_time and healthy_time:
             return (healthy_time - start_time).total_seconds()
-        
+
         return None
-    
+
     def clear_events(self) -> None:
         """Clear all stored events."""
         self.events.clear()
         logger.info("Cleared all stored events")
-    
+
     def get_event_summary(self) -> Dict[str, Any]:
         """Get a summary of all events.
-        
+
         Returns:
             Dictionary with event statistics
         """
@@ -290,21 +286,18 @@ class ContainerEventMonitor:
             "total_events": len(self.events),
             "containers": len(set(event.container_name for event in self.events)),
             "event_types": {},
-            "time_range": {
-                "start": None,
-                "end": None
-            }
+            "time_range": {"start": None, "end": None},
         }
-        
+
         if self.events:
             # Calculate time range
             timestamps = [event.timestamp for event in self.events]
             summary["time_range"]["start"] = min(timestamps)
             summary["time_range"]["end"] = max(timestamps)
-            
+
             # Count event types
             for event in self.events:
                 action = event.action
                 summary["event_types"][action] = summary["event_types"].get(action, 0) + 1
-        
+
         return summary

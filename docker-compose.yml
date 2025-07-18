@@ -1,6 +1,5 @@
 # Docker Compose - Base Service Definitions
 # This replaces the complex Podman orchestration system with standard Docker Compose
-version: '3.8'
 
 services:
   postgres:
@@ -26,9 +25,9 @@ services:
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432"]
       interval: 10s
-      timeout: 5s
+      timeout: 2s
       retries: 5
-      start_period: 30s
+      start_period: 1s
     restart: unless-stopped
     deploy:
       resources:
@@ -83,9 +82,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 2s
       retries: 3
-      start_period: 60s
+      start_period: 1s
     restart: unless-stopped
     deploy:
       resources:
@@ -148,9 +147,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 25 && nc -z localhost 143"]
       interval: 30s
-      timeout: 10s
+      timeout: 2s
       retries: 3
-      start_period: 60s
+      start_period: 1s
     restart: unless-stopped
     deploy:
       resources:
@@ -204,9 +203,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "dig @localhost lab.sethlakowske.com +short || nc -zv localhost 53"]
       interval: 30s
-      timeout: 10s
+      timeout: 2s
       retries: 3
-      start_period: 60s
+      start_period: 1s
     restart: unless-stopped
     deploy:
       resources:

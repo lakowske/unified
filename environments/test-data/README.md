@@ -255,30 +255,30 @@ jobs:
 ### Adding New Environments
 
 1. Create environment directory: `test_data/environments/new-env/`
-2. Create configuration files:
+1. Create configuration files:
    - `.env.new-env` - Environment variables
    - `docker-compose.new-env.yml` - Service definitions
-3. Update validation data:
+1. Update validation data:
    - Add port mappings to `expected_ports.json`
    - Add health checks to `service_health.json`
    - Add startup sequence to `startup_order.json`
-4. Run validation: `./scripts/run_static_tests.py --validation-only`
+1. Run validation: `./scripts/run_static_tests.py --validation-only`
 
 ### Updating Test Data
 
 1. Modify fixture files in `test_data/fixtures/`
-2. Update validation data if needed
-3. Run tests to verify changes: `./scripts/run_static_tests.py`
-4. Update documentation if necessary
+1. Update validation data if needed
+1. Run tests to verify changes: `./scripts/run_static_tests.py`
+1. Update documentation if necessary
 
 ### Troubleshooting
 
 #### Common Issues
 
 1. **Port Conflicts**: Check `expected_ports.json` for conflicting port assignments
-2. **Docker Issues**: Ensure Docker is running and containers can be built
-3. **Permission Issues**: Verify file permissions for test data files
-4. **Network Issues**: Check if test ports are available on the host
+1. **Docker Issues**: Ensure Docker is running and containers can be built
+1. **Permission Issues**: Verify file permissions for test data files
+1. **Network Issues**: Check if test ports are available on the host
 
 #### Debug Commands
 
@@ -309,19 +309,19 @@ PYTHONPATH=src python -m pytest tests/integration/test_simple_environments.py -v
 ### Optimization Tips
 
 1. **Build Base Images**: Pre-build the base-debian image for faster startup
-2. **Parallel Testing**: Use different environments in parallel for faster CI/CD
-3. **Resource Limits**: Set appropriate Docker resource limits
-4. **Clean Up**: Always clean up test environments after testing
+1. **Parallel Testing**: Use different environments in parallel for faster CI/CD
+1. **Resource Limits**: Set appropriate Docker resource limits
+1. **Clean Up**: Always clean up test environments after testing
 
 ## Contributing
 
 When contributing to the static test data system:
 
 1. Follow the existing directory structure and naming conventions
-2. Add comprehensive validation data for new environments
-3. Update this README with new environments or significant changes
-4. Test all changes with the test runner before submitting
-5. Ensure backward compatibility with existing tests
+1. Add comprehensive validation data for new environments
+1. Update this README with new environments or significant changes
+1. Test all changes with the test runner before submitting
+1. Ensure backward compatibility with existing tests
 
 ## Security Notes
 

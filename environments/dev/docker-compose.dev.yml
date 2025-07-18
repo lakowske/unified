@@ -1,6 +1,5 @@
 # Docker Compose - Development Environment Overrides
 # This file contains development-specific settings that override base configuration
-version: '3.8'
 
 services:
   postgres:
