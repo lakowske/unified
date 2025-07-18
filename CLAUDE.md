@@ -10,7 +10,7 @@ A comprehensive containerized infrastructure project providing integrated mail, 
 
 - **Docker Compose** - Standard container orchestration with proper dependency management
 - **Flyway** - Industry-standard database migration system (replaced custom poststack)
-- **Shared Base Image** - `localhost/poststack/base-debian:latest` for layer efficiency
+- **Shared Base Image** - `localhost/unified/base-debian:latest` for layer efficiency
 - **Service Integration** - Mail (Postfix/Dovecot), DNS (BIND), Web (Apache), Database (PostgreSQL)
 
 ### Container Runtime
@@ -50,48 +50,36 @@ Environment-specific configurations using standard Docker Compose patterns:
 - `docker-compose.dev.yml` - Development overrides
 - `docker-compose.yml` - Base service definitions
 
-**Init Containers (Manual Execution):**
+**Init Containers:**
 
-Services with `profiles: [init]` must be run manually since podman-compose lacks profile support:
+Services can be run as needed using Docker Compose:
 
 ```bash
 # Run volume setup
-podman run --rm -v logs-dev:/data/logs -v certificates-dev:/data/certificates \
-  localhost/unified/volume-setup:latest
+docker compose run --rm volume-setup
 
 # Run database migrations
-podman run --rm --network unified_default \
-  -v ./migrations:/app/migrations:ro \
-  -e POSTSTACK_DATABASE_URL=postgresql://user:pass@postgres:5432/db \
-  localhost/poststack/cli:latest db migrate-project --yes
+docker compose run --rm flyway
 ```
 
-### Poststack Development Workflow
+### Database Migration Workflow
 
-**⚠️ IMPORTANT: Poststack is now a simplified CLI tool**
+**🚀 ENTERPRISE-GRADE: Flyway Database Migrations**
 
-Poststack has been simplified from 13,069 lines to 4,738 lines (64% reduction), removing all orchestration capabilities and focusing solely on database operations.
-
-**Poststack Installation After Changes:**
-
-- When making changes to poststack source at `/home/seth/Software/dev/poststack/src/`
-- Reinstall: `pip install -e /home/seth/Software/dev/poststack/` (from unified directory with .venv activated)
-- The unified project uses its own installed copy of poststack, not source files directly
+The project uses industry-standard Flyway for database schema management, providing enterprise-grade reliability and conflict resolution.
 
 **Database Management:**
 
 ```bash
-# Database operations (via poststack CLI)
-poststack db migrate-project              # Apply pending migrations
-poststack db migrate-project --dry-run    # Preview migrations
-poststack db migration-status             # Check migration status
-poststack db rollback <version>           # Rollback to version
-poststack db shell                        # Open PostgreSQL shell
-poststack db test-connection               # Test database connectivity
+# Database operations (via Flyway)
+docker compose run --rm flyway info        # Show migration status
+docker compose run --rm flyway migrate     # Apply pending migrations
+docker compose run --rm flyway validate    # Validate migration integrity
+docker compose run --rm flyway baseline    # Baseline existing database
+docker compose run --rm flyway repair      # Repair failed migrations
 
-# Volume operations
-poststack volumes list                     # List volumes
-poststack volumes clean                    # Clean unused volumes
+# Direct database access
+docker compose exec postgres psql -U $DB_USER -d $DB_NAME
 ```
 
 ### Container Management
@@ -123,27 +111,22 @@ The project includes an advanced parallel build system that respects dependencie
 **Build Order:**
 
 1. **Level 1**: `base-debian` (shared foundation)
-1. **Level 2**: `postgres`, `poststack-cli`, `volume-setup`, `apache`, `mail`, `dns` (parallel)
+1. **Level 2**: `postgres`, `volume-setup`, `apache`, `mail`, `dns` (parallel)
 
 **Manual Container Builds:**
 
 ```bash
 # Build individual containers manually
-podman build -f containers/apache/Dockerfile . -t localhost/unified/apache:latest
-podman build -f containers/mail/Dockerfile . -t localhost/unified/mail:latest
-podman build -f containers/dns/Dockerfile . -t localhost/unified/dns:latest
-podman build -f containers/volume-setup/Dockerfile . -t localhost/unified/volume-setup:latest
-
-# Build poststack containers (from poststack directory)
-cd /home/seth/Software/dev/poststack
-podman build -f containers/postgres/Dockerfile . -t localhost/poststack/postgres:latest
-cd /home/seth/Software/dev/unified
-podman build -f containers/poststack/Dockerfile /home/seth/Software/dev/poststack/ -t localhost/poststack/cli:latest
+docker build -f containers/apache/Dockerfile . -t localhost/unified/apache:latest
+docker build -f containers/mail/Dockerfile . -t localhost/unified/mail:latest
+docker build -f containers/dns/Dockerfile . -t localhost/unified/dns:latest
+docker build -f containers/volume-setup/Dockerfile . -t localhost/unified/volume-setup:latest
+docker build -f containers/postgres/Dockerfile . -t localhost/unified/postgres:latest
 ```
 
 **Shared Base Image Architecture:**
 
-All containers inherit from `localhost/poststack/base-debian:latest` which includes:
+All containers inherit from `localhost/unified/base-debian:latest` which includes:
 
 - Debian Bookworm base with Python 3.11, pip, postgresql-client
 - Virtual environment at `/data/.venv`
@@ -183,14 +166,14 @@ All containers inherit from `localhost/poststack/base-debian:latest` which inclu
 
 ```bash
 # View service logs via compose
-podman-compose --env-file .env.dev logs mail
+docker compose --env-file .env.dev logs mail
 
 # Direct container log access
-podman exec mail-dev tail -20 /data/logs/mail/postfix.log
-podman exec apache-dev tail -20 /data/logs/apache/error.log
+docker exec mail-dev tail -20 /data/logs/mail/postfix.log
+docker exec apache-dev tail -20 /data/logs/apache/error.log
 
 # View volume contents
-podman run --rm -v logs-dev:/logs alpine ls -la /logs/
+docker run --rm -v logs-dev:/logs alpine ls -la /logs/
 ```
 
 ## Performance Baselines
@@ -198,7 +181,7 @@ podman run --rm -v logs-dev:/logs alpine ls -la /logs/
 ### Container Build Times (Clean Environment)
 
 - **Base Image**: Pre-built (564 MB)
-- **Poststack CLI**: 41.25s (1.11 GB)
+- **Flyway**: Lightweight official image (~100 MB)
 - **Postgres**: 16.82s (1.58 GB)
 - **Volume-setup**: 13.11s (564 MB)
 - **Apache**: 44.63s (616 MB)
@@ -223,13 +206,13 @@ podman run --rm -v logs-dev:/logs alpine ls -la /logs/
 
 ```bash
 # List all project volumes
-podman volume ls | grep dev
+docker volume ls | grep dev
 
 # Remove environment volumes (careful - data loss!)
-podman-compose --env-file .env.dev down -v
+docker compose --env-file .env.dev down -v
 
 # Backup important volumes
-podman run --rm -v postgres-data-dev:/data -v $(pwd):/backup alpine \
+docker run --rm -v postgres-data-dev:/data -v $(pwd):/backup alpine \
   tar czf /backup/postgres-backup.tar.gz -C /data .
 ```
 
@@ -267,13 +250,13 @@ docker run --rm -v {volume}:/mnt alpine ls -la /mnt
 
 ## Migration Notes
 
-### From Legacy Poststack to Enterprise-Grade Infrastructure
+### Infrastructure Evolution
 
-- **Migration System**: Replaced custom poststack with industry-standard Flyway
-- **Container Runtime**: Migrated from Podman to Docker Compose for better dependency management
-- **Code Reduction**: Eliminated 4,738 lines of custom migration code (64% reduction)
-- **Reliability**: Resolved migration tracking conflicts and DNS container issues
-- **Performance**: Migrations now complete in 0.061 seconds with zero conflicts
+- **Migration System**: Upgraded to industry-standard Flyway for enterprise-grade database management
+- **Container Runtime**: Standardized on Docker Compose for universal compatibility and dependency management
+- **Code Simplification**: Eliminated custom migration code in favor of proven industry standards
+- **Reliability**: Resolved migration tracking conflicts and DNS container permission issues
+- **Performance**: Migrations complete in milliseconds with zero conflicts using Flyway's proven algorithms
 - **Security**: Maintained non-root container security throughout infrastructure
 
 ## Development History
@@ -281,3 +264,7 @@ docker run --rm -v {volume}:/mnt alpine ls -la /mnt
 For detailed information about issues encountered and solutions implemented during development, see:
 
 **[Development Journal](development-journal.md)** - Comprehensive record of roadblocks, solutions, and lessons learned throughout the project evolution.
+
+**⚠️ IMPORTANT for Claude Code Sessions:**
+
+Claude assistants MUST update `development-journal.md` whenever new roadblocks, issues, or significant challenges arise during development and testing. This ensures continuity across sessions and helps future development work learn from past solutions.
