@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Parallel Container Build System for Unified Infrastructure
+"""Parallel Container Build System for Unified Infrastructure.
 
 Builds container images in parallel while respecting build dependencies.
 Logs all build output to the logs/ directory for tracking and debugging.
@@ -31,7 +31,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
     handlers=[
-        logging.FileHandler(log_dir / f"container-build-{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"),
+        logging.FileHandler(log_dir / f"container-build-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}.log"),
         logging.StreamHandler(sys.stdout),
     ],
 )
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ContainerConfig:
-    """Configuration for a container build"""
+    """Configuration for a container build."""
 
     name: str
     dockerfile_path: str
@@ -53,7 +53,7 @@ class ContainerConfig:
 
 @dataclass
 class BuildResult:
-    """Result of a container build operation"""
+    """Result of a container build operation."""
 
     name: str
     success: bool
@@ -66,15 +66,16 @@ class BuildResult:
 
 
 class ContainerBuilder:
-    """Manages parallel container builds with dependency resolution"""
+    """Manages parallel container builds with dependency resolution."""
 
     def __init__(self):
+        """Initialize container builder."""
         self.containers = self._define_containers()
         self.build_results: Dict[str, BuildResult] = {}
         self.build_start_time = datetime.now(timezone.utc)
 
     def _define_containers(self) -> Dict[str, ContainerConfig]:
-        """Define all container configurations with dependencies"""
+        """Define all container configurations with dependencies."""
         return {
             "base-debian": ContainerConfig(
                 name="base-debian",
@@ -127,7 +128,7 @@ class ContainerBuilder:
         }
 
     def _get_build_order(self) -> List[List[str]]:
-        """Calculate build order respecting dependencies using topological sort"""
+        """Calculate build order respecting dependencies using topological sort."""
         # Build dependency graph
         graph = {name: set(config.dependencies) for name, config in self.containers.items()}
 
@@ -140,7 +141,8 @@ class ContainerBuilder:
             ready = {name for name in remaining if not (graph[name] & remaining)}
 
             if not ready:
-                raise ValueError(f"Circular dependency detected in: {remaining}")
+                msg = f"Circular dependency detected in: {remaining}"
+                raise ValueError(msg)
 
             levels.append(sorted(ready))
             remaining -= ready
@@ -149,7 +151,7 @@ class ContainerBuilder:
         return levels
 
     async def _build_container(self, container_name: str) -> BuildResult:
-        """Build a single container with comprehensive logging"""
+        """Build a single container with comprehensive logging."""
         config = self.containers[container_name]
         start_time = datetime.now(timezone.utc)
 
@@ -175,7 +177,7 @@ class ContainerBuilder:
                 image_size = size_result.stdout.strip() if size_result.returncode == 0 else "Unknown"
 
                 # Log skip to file
-                with open(log_file, "w") as log_handle:
+                with log_file.open("w") as log_handle:
                     log_handle.write(f"Container Build Log: {container_name}\n")
                     log_handle.write(f"Started: {start_time.isoformat()}\n")
                     log_handle.write("Status: SKIPPED - Image already exists\n")
@@ -207,7 +209,7 @@ class ContainerBuilder:
             logger.info(f"Executing: {' '.join(cmd)}")
 
             # Run build with output capture
-            with open(log_file, "w") as log_handle:
+            with log_file.open("w") as log_handle:
                 log_handle.write(f"Container Build Log: {container_name}\n")
                 log_handle.write(f"Started: {start_time.isoformat()}\n")
                 log_handle.write(f"Command: {' '.join(cmd)}\n")
@@ -282,7 +284,7 @@ class ContainerBuilder:
             logger.error(f"❌ Build error: {container_name} - {error_msg}")
 
             # Log the error
-            with open(log_file, "a") as log_handle:
+            with log_file.open("a") as log_handle:
                 log_handle.write(f"\n\nBUILD ERROR:\n{error_msg}\n")
 
             return BuildResult(
@@ -297,7 +299,7 @@ class ContainerBuilder:
             )
 
     async def build_all(self) -> Dict[str, BuildResult]:
-        """Build all containers in parallel respecting dependencies"""
+        """Build all containers in parallel respecting dependencies."""
         logger.info("🏗️  Starting parallel container build system")
         logger.info(f"Build start time: {self.build_start_time.isoformat()}")
         logger.info(f"Total containers to build: {len(self.containers)}")
@@ -336,7 +338,7 @@ class ContainerBuilder:
         return self.build_results
 
     def _generate_build_summary(self):
-        """Generate comprehensive build summary and save to logs"""
+        """Generate comprehensive build summary and save to logs."""
         end_time = datetime.now(timezone.utc)
         total_time = (end_time - self.build_start_time).total_seconds()
 
@@ -365,7 +367,7 @@ class ContainerBuilder:
 
         # Save summary to JSON
         summary_file = log_dir / f"build-summary-{self.build_start_time.strftime('%Y%m%d-%H%M%S')}.json"
-        with open(summary_file, "w") as f:
+        with summary_file.open("w") as f:
             json.dump(summary, f, indent=2, default=str)
 
         # Log summary
@@ -391,7 +393,7 @@ class ContainerBuilder:
 
 
 async def main():
-    """Main entry point for the build system"""
+    """Main entry point for the build system."""
     builder = ContainerBuilder()
 
     try:

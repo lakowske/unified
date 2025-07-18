@@ -123,7 +123,7 @@ clean-all: down clean-volumes clean-images clean
 .PHONY: rebuild rebuild-base rebuild-postgres rebuild-apache rebuild-mail rebuild-dns
 rebuild: clean-images all
 
-rebuild-base: 
+rebuild-base:
 	-$(DOCKER) rmi $(BASE_IMAGE) 2>/dev/null || true
 	rm -f $(BASE_STAMP)
 	$(MAKE) $(BASE_STAMP)

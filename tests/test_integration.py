@@ -216,16 +216,20 @@ class DockerComposeManager:
         """Context manager for isolated test environment."""
         try:
             if not self.build_images():
-                raise RuntimeError("Failed to build container images")
+                msg = "Failed to build container images"
+                raise RuntimeError(msg)
 
             if not self.start_environment():
-                raise RuntimeError("Failed to start test environment")
+                msg = "Failed to start test environment"
+                raise RuntimeError(msg)
 
             if not self.run_migrations():
-                raise RuntimeError("Failed to run database migrations")
+                msg = "Failed to run database migrations"
+                raise RuntimeError(msg)
 
             if not self.wait_for_services():
-                raise RuntimeError("Services did not become healthy")
+                msg = "Services did not become healthy"
+                raise RuntimeError(msg)
 
             yield self
 

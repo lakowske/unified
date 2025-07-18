@@ -170,7 +170,8 @@ Examples:
             handler = getattr(self, method_name, None)
 
             if handler:
-                return handler(parsed_args)
+                result = handler(parsed_args)
+                return result if isinstance(result, int) else 0
             print(f"Unknown command: {parsed_args.command}", file=sys.stderr)
             return 1
 
@@ -513,7 +514,7 @@ Examples:
                 print(f"  Environment variables: {len(env_config['env_vars'])}")
 
                 print("\n  Services:")
-                for service_name in env_config["service_configs"].keys():
+                for service_name in env_config["service_configs"]:
                     print(f"    {service_name}")
 
             return 0
@@ -583,7 +584,7 @@ Examples:
         return common_ports.get(port, "http")
 
 
-def main():
+def main() -> None:
     """Main entry point for the query CLI."""
     cli = QueryCLI()
     sys.exit(cli.run())

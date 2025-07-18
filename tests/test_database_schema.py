@@ -1,4 +1,4 @@
-"""Database Schema Integration Tests
+"""Database Schema Integration Tests.
 
 This module provides comprehensive tests for database schema integrity,
 migrations, and data consistency in the unified infrastructure.
@@ -626,7 +626,7 @@ class TestDatabasePerformance:
         """Test database connection establishment performance."""
         connection_times = []
 
-        for i in range(10):
+        for _i in range(10):
             start_time = time.time()
             result = db_ready.execute_query("SELECT 1;")
             end_time = time.time()

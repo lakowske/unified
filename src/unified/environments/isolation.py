@@ -10,7 +10,7 @@ import string
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Union
 
 from .config import EnvironmentConfig
 from .manager import EnvironmentManager
@@ -34,7 +34,7 @@ class EnvironmentIsolation:
         self.config = EnvironmentConfig(project_dir)
 
         # Track isolated environments for cleanup
-        self._isolated_environments = set()
+        self._isolated_environments: Set[str] = set()
 
     def create_isolated_environment(
         self,
@@ -81,7 +81,8 @@ class EnvironmentIsolation:
                 self._isolated_environments.add(env_name)
                 logger.info(f"Isolated environment '{env_name}' created successfully")
                 return env_name
-            raise RuntimeError(f"Failed to create isolated environment '{env_name}'")
+            msg = f"Failed to create isolated environment '{env_name}'"
+            raise RuntimeError(msg)
 
         except Exception as e:
             logger.error(f"Error creating isolated environment: {e}")
@@ -227,7 +228,7 @@ class EnvironmentIsolation:
         """
         import socket
 
-        available_ports = []
+        available_ports: List[int] = []
         current_port = start_port
 
         while len(available_ports) < count and current_port < 65535:
@@ -307,7 +308,8 @@ class EnvironmentIsolation:
             # Start if requested
             if auto_start:
                 if not self.manager.start_environment(temp_env):
-                    raise RuntimeError(f"Failed to start temporary environment '{temp_env}'")
+                    msg = f"Failed to start temporary environment '{temp_env}'"
+                    raise RuntimeError(msg)
 
             yield temp_env
 
@@ -361,7 +363,7 @@ class EnvironmentIsolation:
                     parts = env_name.split("_")
                     if len(parts) >= 2 and parts[1].isdigit():
                         used_offsets.add(int(parts[1]))
-                except:
+                except (ValueError, IndexError):
                     pass
 
         # Find available offset

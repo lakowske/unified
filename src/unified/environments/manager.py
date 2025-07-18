@@ -26,7 +26,7 @@ class EnvironmentManager:
         """
         self.project_dir = Path(project_dir)
         self.config = EnvironmentConfig(project_dir)
-        self.active_environments = {}
+        self.active_environments: Dict[str, Dict[str, Any]] = {}
 
     def list_environments(self) -> List[str]:
         """List all available environments.
@@ -74,7 +74,7 @@ class EnvironmentManager:
             new_env_file = self.project_dir / f".env.{environment}"
 
             # Read template and apply customizations
-            with open(template_file) as f:
+            with template_file.open() as f:
                 template_content = f.read()
 
             # Apply custom variables if provided
@@ -102,7 +102,7 @@ class EnvironmentManager:
                 template_content += f"\nENVIRONMENT={environment}\n"
 
             # Write new environment file
-            with open(new_env_file, "w") as f:
+            with new_env_file.open("w") as f:
                 f.write(template_content)
 
             logger.info(f"Environment '{environment}' created successfully")

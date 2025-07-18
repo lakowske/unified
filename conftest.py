@@ -29,8 +29,8 @@ def development_environment():
 
     # Check if development environment is running
     try:
-        result = subprocess.run(
-            ["docker", "ps", "--format", "table {{.Names}}\t{{.Status}}", "--filter", "name=dev"],
+        result = subprocess.run(  # noqa: S603
+            ["docker", "ps", "--format", "table {{.Names}}\t{{.Status}}", "--filter", "name=dev"],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=10,

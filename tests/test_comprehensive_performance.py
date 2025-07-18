@@ -410,9 +410,7 @@ class TestComprehensivePerformance:
 
             # Database verification
             start_time = time.time()
-            db_result = db_client.execute_query(
-                f"SELECT username, email, is_active FROM unified.users WHERE id = {user_id};"
-            )
+            _ = db_client.execute_query(f"SELECT username, email, is_active FROM unified.users WHERE id = {user_id};")
             db_time = time.time() - start_time
 
             total_time = api_time + db_time

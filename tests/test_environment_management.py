@@ -235,9 +235,9 @@ class TestEnvironmentIsolation:
 
         assert isolation._is_isolated_environment("test_123456_abc123") == True
         assert isolation._is_isolated_environment("feature_user_auth") == True
-        assert isolation._is_isolated_environment("temp_987654_def456") == True
-        assert isolation._is_isolated_environment("dev") == False
-        assert isolation._is_isolated_environment("production") == False
+        assert isolation._is_isolated_environment("temp_987654_def456") is True
+        assert not isolation._is_isolated_environment("dev")
+        assert not isolation._is_isolated_environment("production")
 
     def test_get_environment_type(self, tmp_path):
         """Test environment type detection."""

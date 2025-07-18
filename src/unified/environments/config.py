@@ -24,9 +24,9 @@ class EnvironmentConfig:
             project_dir: Path to the project directory containing configuration files
         """
         self.project_dir = Path(project_dir)
-        self.env_vars = {}
-        self.compose_config = {}
-        self.service_configs = {}
+        self.env_vars: Dict[str, str] = {}
+        self.compose_config: Dict[str, Any] = {}
+        self.service_configs: Dict[str, Dict[str, Any]] = {}
 
     def load_environment(self, environment: str) -> Dict[str, Any]:
         """Load configuration for a specific environment.
@@ -46,14 +46,16 @@ class EnvironmentConfig:
         # Load environment variables from .env file
         env_file = self.project_dir / f".env.{environment}"
         if not env_file.exists():
-            raise FileNotFoundError(f"Environment file not found: {env_file}")
+            msg = f"Environment file not found: {env_file}"
+            raise FileNotFoundError(msg)
 
         self.env_vars = self._parse_env_file(env_file)
 
         # Load docker-compose configuration
         compose_file = self.project_dir / "docker-compose.yml"
         if not compose_file.exists():
-            raise FileNotFoundError(f"Docker compose file not found: {compose_file}")
+            msg = f"Docker compose file not found: {compose_file}"
+            raise FileNotFoundError(msg)
 
         self.compose_config = self._parse_compose_file(compose_file)
 
@@ -85,7 +87,7 @@ class EnvironmentConfig:
         env_vars = {}
 
         try:
-            with open(env_file) as f:
+            with env_file.open() as f:
                 for line in f:
                     line = line.strip()
 
@@ -111,7 +113,8 @@ class EnvironmentConfig:
                         env_vars[key] = value
 
         except Exception as e:
-            raise ValueError(f"Error parsing environment file {env_file}: {e}")
+            msg = f"Error parsing environment file {env_file}: {e}"
+            raise ValueError(msg) from e
 
         logger.debug(f"Parsed {len(env_vars)} environment variables from {env_file}")
         return env_vars
@@ -126,14 +129,15 @@ class EnvironmentConfig:
             Dictionary containing compose configuration
         """
         try:
-            with open(compose_file) as f:
+            with compose_file.open() as f:
                 compose_config = yaml.safe_load(f)
 
             logger.debug(f"Parsed compose configuration from {compose_file}")
             return compose_config
 
         except Exception as e:
-            raise ValueError(f"Error parsing compose file {compose_file}: {e}")
+            msg = f"Error parsing compose file {compose_file}: {e}"
+            raise ValueError(msg) from e
 
     def _merge_compose_configs(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Merge compose configurations with override taking precedence.
@@ -173,7 +177,7 @@ class EnvironmentConfig:
         Returns:
             Dictionary mapping service names to their configurations
         """
-        service_configs = {}
+        service_configs: Dict[str, Dict[str, Any]] = {}
 
         if "services" not in self.compose_config:
             return service_configs
@@ -229,7 +233,7 @@ class EnvironmentConfig:
 
         return port_mappings
 
-    def _substitute_variables(self, value: str) -> str:
+    def _substitute_variables(self, value: Union[str, Any]) -> str:
         """Substitute environment variables in configuration values.
 
         Args:
@@ -244,7 +248,7 @@ class EnvironmentConfig:
         # Handle ${VAR} format
         pattern = r"\$\{([^}]+)\}"
 
-        def replace_var(match):
+        def replace_var(match: re.Match[str]) -> str:
             var_name = match.group(1)
             return self.env_vars.get(var_name, match.group(0))
 
@@ -316,7 +320,7 @@ class EnvironmentConfig:
         Returns:
             Dictionary with validation results
         """
-        results = {"valid": True, "errors": [], "warnings": []}
+        results: Dict[str, Any] = {"valid": True, "errors": [], "warnings": []}
 
         # Check required environment variables
         required_vars = ["ENVIRONMENT", "DB_NAME", "DB_USER", "DB_PASSWORD"]

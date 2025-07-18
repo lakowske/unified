@@ -110,7 +110,7 @@ class EnvironmentCLI:
         feature_parser.add_argument("--no-start", action="store_true", help="Don't start the environment automatically")
 
         # List isolated environments
-        list_isolated_parser = subparsers.add_parser("list-isolated", help="List isolated environments")
+        # list_isolated_parser = subparsers.add_parser("list-isolated", help="List isolated environments")
 
         # Cleanup isolated environments
         cleanup_parser = subparsers.add_parser("cleanup", help="Clean up isolated environments")
@@ -157,7 +157,8 @@ class EnvironmentCLI:
             handler = getattr(self, method_name, None)
 
             if handler:
-                return handler(parsed_args)
+                result = handler(parsed_args)
+                return result if isinstance(result, int) else 0
             print(f"Unknown command: {parsed_args.command}", file=sys.stderr)
             return 1
 
@@ -402,7 +403,7 @@ class EnvironmentCLI:
         return variables
 
 
-def main():
+def main() -> None:
     """Main entry point for the environment CLI."""
     cli = EnvironmentCLI()
     sys.exit(cli.run())

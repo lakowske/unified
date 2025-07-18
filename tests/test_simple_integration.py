@@ -132,7 +132,8 @@ def postgres_container(docker_manager):
         # Final status check
         status = docker_manager.get_container_status("postgres")
         logger.error(f"Postgres container status: {status}")
-        assert False, "Postgres container did not become ready in time"
+        msg = "Postgres container did not become ready in time"
+        raise AssertionError(msg)
 
     yield docker_manager
 
@@ -240,7 +241,7 @@ class TestContainerHealthChecks:
     def test_postgres_health_check(self, postgres_container):
         """Test that postgres health check is working."""
         # Get container details
-        result = subprocess.run(["docker", "inspect", "postgres-test"], capture_output=True, text=True, timeout=30)
+        result = subprocess.run(["docker", "inspect", "postgres-test"], capture_output=True, text=True, timeout=30)  # noqa: S603, S607
 
         assert result.returncode == 0, f"Container inspect failed: {result.stderr}"
 
@@ -255,7 +256,7 @@ class TestContainerHealthChecks:
 
     def test_container_resource_limits(self, postgres_container):
         """Test that container resource limits are applied."""
-        result = subprocess.run(["docker", "inspect", "postgres-test"], capture_output=True, text=True, timeout=30)
+        result = subprocess.run(["docker", "inspect", "postgres-test"], capture_output=True, text=True, timeout=30)  # noqa: S603, S607
 
         assert result.returncode == 0, f"Container inspect failed: {result.stderr}"
 
@@ -295,7 +296,7 @@ class TestPerformanceBaseline:
             # Wait for ready state
             max_wait = 60
             ready_time = None
-            for i in range(max_wait):
+            for _i in range(max_wait):
                 status = manager.get_container_status("postgres")
                 if status and (
                     "healthy" in status.get("State", "").lower() or "running" in status.get("State", "").lower()
@@ -324,8 +325,8 @@ def test_simple_docker_compose_functionality():
     project_dir = Path(__file__).parent.parent
 
     # Test that docker compose can read the compose file
-    result = subprocess.run(
-        ["docker", "compose", "-f", str(project_dir / "docker-compose.yml"), "config"],
+    result = subprocess.run(  # noqa: S603
+        ["docker", "compose", "-f", str(project_dir / "docker-compose.yml"), "config"],  # noqa: S607
         capture_output=True,
         text=True,
         timeout=30,

@@ -27,7 +27,7 @@ class NetworkInfo:
         """
         self.project_dir = Path(project_dir)
         self.config = EnvironmentConfig(project_dir)
-        self._cached_status = {}
+        self._cached_status: Dict[str, Any] = {}
         self._cache_expiry = 0
         self._cache_ttl = 30  # Cache for 30 seconds
 
@@ -61,12 +61,14 @@ class NetworkInfo:
             if container_port:
                 for mapping in port_mappings:
                     if mapping.get("container_port") == container_port:
-                        return mapping.get("host_port")
+                        port = mapping.get("host_port")
+                        return str(port) if port else None
                 logger.debug(f"Container port '{container_port}' not found for service '{service}'")
                 return None
 
             # Return first port mapping
-            return port_mappings[0].get("host_port")
+            port = port_mappings[0].get("host_port")
+            return str(port) if port else None
 
         except Exception as e:
             logger.error(f"Error getting service port: {e}")
@@ -89,7 +91,8 @@ class NetworkInfo:
                 return []
 
             service_config = env_config["service_configs"][service]
-            return service_config.get("ports", [])
+            ports = service_config.get("ports", [])
+            return ports if isinstance(ports, list) else []
 
         except Exception as e:
             logger.error(f"Error getting service ports: {e}")
@@ -126,7 +129,7 @@ class NetworkInfo:
         """
         try:
             env_config = self.config.load_environment(environment)
-            service_urls = {}
+            service_urls: Dict[str, List[str]] = {}
 
             for service_name in env_config["service_configs"].keys():
                 urls = []
@@ -178,7 +181,7 @@ class NetworkInfo:
                 ports_to_test = [port] if port else []
             else:
                 port_mappings = self.get_service_ports(environment, service)
-                ports_to_test = [p.get("host_port") for p in port_mappings]
+                ports_to_test = [str(p.get("host_port")) for p in port_mappings if p.get("host_port")]
 
             if not ports_to_test:
                 result["error"] = f"No accessible ports found for service '{service}'"
@@ -189,7 +192,7 @@ class NetworkInfo:
                 if not port:
                     continue
 
-                test_result = self._test_port_connectivity(port, timeout)
+                test_result = self._test_port_connectivity("localhost", int(port), timeout)
                 result["tested_urls"].append(test_result)
 
                 if test_result["accessible"]:
@@ -475,7 +478,7 @@ class NetworkInfo:
             logger.error(f"Error getting service status: {e}")
             return {"state": "unknown", "health": "unknown"}
 
-    def _test_port_connectivity(self, port: str, timeout: int) -> Dict[str, Any]:
+    def _test_port_connectivity(self, host: str, port: int, timeout: int = 5) -> Dict[str, Any]:
         """Test connectivity to a specific port.
 
         Args:
@@ -492,7 +495,7 @@ class NetworkInfo:
         try:
             start_time = time.time()
 
-            with socket.create_connection(("localhost", int(port)), timeout=timeout):
+            with socket.create_connection((host, port), timeout=timeout):
                 result["accessible"] = True
                 result["response_time"] = time.time() - start_time
 

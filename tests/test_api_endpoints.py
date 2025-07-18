@@ -207,7 +207,8 @@ class APITestManager:
         elif method.upper() == "POST":
             response = session.post(f"{self.base_url}{endpoint}", json=data)
         else:
-            raise ValueError(f"Unsupported method: {method}")
+            msg = f"Unsupported method: {method}"
+            raise ValueError(msg)
 
         # Parse JSON response safely
         response_data = {}
