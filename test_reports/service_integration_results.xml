@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="2" failures="0" skipped="0" tests="2" time="3.773" timestamp="2025-07-17T18:51:58.829698-05:00" hostname="ubuntu-box"><testcase classname="tests.test_integration.TestServiceIntegration" name="test_database_migration_status" time="1.885"><error message="failed on setup with &quot;RuntimeError: Failed to start test environment&quot;">tests/test_integration.py:321: in isolated_environment
+    with compose_manager.isolated_environment() as env:
+/usr/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_integration.py:249: in isolated_environment
+    raise RuntimeError("Failed to start test environment")
+E   RuntimeError: Failed to start test environment</error></testcase><testcase classname="tests.test_integration.TestServiceIntegration" name="test_service_logs_accessibility" time="1.864"><error message="failed on setup with &quot;RuntimeError: Failed to start test environment&quot;">tests/test_integration.py:321: in isolated_environment
+    with compose_manager.isolated_environment() as env:
+/usr/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_integration.py:249: in isolated_environment
+    raise RuntimeError("Failed to start test environment")
+E   RuntimeError: Failed to start test environment</error></testcase></testsuite></testsuites>

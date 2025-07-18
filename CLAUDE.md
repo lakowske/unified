@@ -31,7 +31,7 @@ A comprehensive containerized infrastructure project providing integrated mail, 
 # Start development environment
 podman-compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d
 
-# Stop development environment  
+# Stop development environment
 podman-compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml down
 
 # View logs
@@ -46,7 +46,7 @@ podman ps -a --format "table {{.Names}} {{.Status}} {{.CreatedAt}}"
 Since podman-compose doesn't support `--profile`, we use environment-specific configurations:
 
 - `.env.dev` - Development environment variables
-- `.env.staging` - Staging environment variables  
+- `.env.staging` - Staging environment variables
 - `docker-compose.dev.yml` - Development overrides
 - `docker-compose.yml` - Base service definitions
 
@@ -121,8 +121,9 @@ The project includes an advanced parallel build system that respects dependencie
 - ✅ **Build summaries** - JSON reports with complete build session details
 
 **Build Order:**
+
 1. **Level 1**: `base-debian` (shared foundation)
-2. **Level 2**: `postgres`, `poststack-cli`, `volume-setup`, `apache`, `mail`, `dns` (parallel)
+1. **Level 2**: `postgres`, `poststack-cli`, `volume-setup`, `apache`, `mail`, `dns` (parallel)
 
 **Manual Container Builds:**
 
@@ -143,6 +144,7 @@ podman build -f containers/poststack/Dockerfile /home/seth/Software/dev/poststac
 **Shared Base Image Architecture:**
 
 All containers inherit from `localhost/poststack/base-debian:latest` which includes:
+
 - Debian Bookworm base with Python 3.11, pip, postgresql-client
 - Virtual environment at `/data/.venv`
 - Certificate management (certuser/certgroup)
@@ -197,7 +199,7 @@ podman run --rm -v logs-dev:/logs alpine ls -la /logs/
 
 - **Base Image**: Pre-built (564 MB)
 - **Poststack CLI**: 41.25s (1.11 GB)
-- **Postgres**: 16.82s (1.58 GB) 
+- **Postgres**: 16.82s (1.58 GB)
 - **Volume-setup**: 13.11s (564 MB)
 - **Apache**: 44.63s (616 MB)
 - **Mail**: ~90s (660 MB)
@@ -236,9 +238,9 @@ podman run --rm -v postgres-data-dev:/data -v $(pwd):/backup alpine \
 ### Common Issues
 
 1. **Port Conflicts**: Check `.env.dev` for port assignments, avoid system ports
-2. **Volume Permissions**: Ensure certuser/certgroup (UID/GID 9999) has proper access
-3. **Health Check Failures**: Allow sufficient `start_period` for complex services
-4. **DNS Resolution**: Bind service may conflict with host DNS on port 5353
+1. **Volume Permissions**: Ensure certuser/certgroup (UID/GID 9999) has proper access
+1. **Health Check Failures**: Allow sufficient `start_period` for complex services
+1. **DNS Resolution**: Bind service may conflict with host DNS on port 5353
 
 ### Debug Commands
 
@@ -259,9 +261,9 @@ podman run --rm -v {volume}:/mnt alpine ls -la /mnt
 ### Performance Optimization
 
 1. **Graceful Shutdown**: Increase stop timeout for mail/apache containers
-2. **Health Check Tuning**: Adjust intervals based on service startup time
-3. **Resource Limits**: Monitor memory/CPU usage during development
-4. **Layer Caching**: Rebuild containers in dependency order for optimal caching
+1. **Health Check Tuning**: Adjust intervals based on service startup time
+1. **Resource Limits**: Monitor memory/CPU usage during development
+1. **Layer Caching**: Rebuild containers in dependency order for optimal caching
 
 ## Migration Notes
 

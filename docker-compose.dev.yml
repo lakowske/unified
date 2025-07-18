@@ -43,6 +43,13 @@ services:
       - "5354:53/udp"  # Dev DNS port
       - "5354:53/tcp"
 
+  flyway:
+    environment:
+      # Override with proper dev database connection
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/unified_dev
+      FLYWAY_USER: unified_dev_user
+      FLYWAY_PASSWORD: dev_password123
+
   # Volume setup runs with init profile for development
   volume-setup:
     profiles:

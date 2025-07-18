@@ -1,4 +1,4 @@
-FROM poststack/base-debian:latest
+FROM localhost/poststack/base-debian:latest
 
 # Install BIND DNS server and PostgreSQL client
 RUN apt-get update && apt-get install -y \
@@ -35,7 +35,7 @@ RUN chmod +x /entrypoint.sh
 # Expose DNS ports
 EXPOSE 53/udp 53/tcp 953/tcp
 
-# Create volume for zone files  
+# Create volume for zone files
 VOLUME ["/data/dns/zones"]
 
 # Health check

@@ -1,0 +1,43 @@
+================================================================================
+UNIFIED INFRASTRUCTURE INTEGRATION TEST REPORT
+================================================================================
+Test Environment: test
+Project Directory: /home/seth/Software/dev/unified
+Test Duration: 45.41 seconds
+Success Rate: 0.0%
+Test Timestamp: 2025-07-17 18:52:02.616416
+
+TEST SUITE RESULTS SUMMARY:
+--------------------------------------------------
+BASIC_INTEGRATION         FAILED
+SERVICE_INTEGRATION       FAILED
+
+DETAILED TEST SUITE RESULTS:
+--------------------------------------------------
+
+BASIC INTEGRATION Tests:
+  Status: FAILED
+  Exit Code: 1
+  Timestamp: 2025-07-17 18:51:58.813784
+
+SERVICE INTEGRATION Tests:
+  Status: FAILED
+  Exit Code: 1
+  Timestamp: 2025-07-17 18:52:02.616415
+
+OVERALL SUMMARY:
+--------------------------------------------------
+Total Test Suites: 2
+Passed: 0
+Failed: 2
+Success Rate: 0.0%
+Total Duration: 45.41 seconds
+
+❌ SOME TESTS FAILED - Check test results and service configuration
+
+RECOMMENDations:
+--------------------------------------------------
+• Investigate failed test suites: basic_integration, service_integration
+• Check service logs for errors
+• Verify container images are built correctly
+================================================================================

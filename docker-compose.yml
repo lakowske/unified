@@ -45,7 +45,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      volume-setup:
+      flyway:
         condition: service_completed_successfully
     environment:
       # Database connection
@@ -102,7 +102,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      volume-setup:
+      flyway:
         condition: service_completed_successfully
     environment:
       # Database connection
@@ -167,7 +167,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      volume-setup:
+      flyway:
         condition: service_completed_successfully
     environment:
       # Database connection
@@ -217,24 +217,22 @@ services:
           memory: 128M
           cpus: '0.05'
 
-  db-migrate:
-    image: localhost/poststack/cli:latest
-    container_name: db-migrate-${ENVIRONMENT}
+  flyway:
+    image: flyway/flyway:latest
+    container_name: flyway-${ENVIRONMENT}
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      # Database connection for migrations
-      POSTSTACK_DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
-      POSTSTACK_LOG_LEVEL: INFO
-      ENVIRONMENT: ${ENVIRONMENT}
+      # Flyway database connection
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      FLYWAY_USER: ${DB_USER}
+      FLYWAY_PASSWORD: ${DB_PASSWORD}
+      FLYWAY_SCHEMAS: unified
     volumes:
-      - ./migrations:/app/migrations:ro  # Mount local migrations directory
-      - logs:/data/logs
-    command: ["db", "migrate-project", "--yes"]
+      - ./migrations:/flyway/sql:ro  # Mount local migrations directory
+    command: ["migrate"]
     restart: "no"  # Run once like init container
-    profiles:
-      - init  # Only run when explicitly requested
 
   volume-setup:
     image: localhost/unified/volume-setup:latest

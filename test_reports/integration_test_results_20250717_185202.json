@@ -1,0 +1,28 @@
+{
+  "test_results": {
+    "basic_integration": {
+      "test_type": "basic_integration",
+      "exit_code": 1,
+      "passed": false,
+      "timestamp": 1752796318.8137836
+    },
+    "service_integration": {
+      "test_type": "service_integration",
+      "exit_code": 1,
+      "passed": false,
+      "timestamp": 1752796322.6164153
+    },
+    "overall": {
+      "total_test_suites": 2,
+      "passed_test_suites": 0,
+      "failed_test_suites": 2,
+      "success_rate": 0.0,
+      "duration": 45.40870952606201,
+      "timestamp": 1752796322.6164165,
+      "environment": "test"
+    }
+  },
+  "performance_metrics": {},
+  "environment": "test",
+  "timestamp": "20250717_185202"
+}

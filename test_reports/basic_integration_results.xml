@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="5" failures="0" skipped="0" tests="5" time="41.567" timestamp="2025-07-17T18:51:17.234086-05:00" hostname="ubuntu-box"><testcase classname="tests.test_integration.TestContainerIntegration" name="test_containers_start_successfully" time="28.205"><error message="failed on setup with &quot;RuntimeError: Failed to start test environment&quot;">tests/test_integration.py:321: in isolated_environment
+    with compose_manager.isolated_environment() as env:
+/usr/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_integration.py:249: in isolated_environment
+    raise RuntimeError("Failed to start test environment")
+E   RuntimeError: Failed to start test environment</error></testcase><testcase classname="tests.test_integration.TestContainerIntegration" name="test_database_connectivity" time="7.684"><error message="failed on setup with &quot;RuntimeError: Failed to start test environment&quot;">tests/test_integration.py:321: in isolated_environment
+    with compose_manager.isolated_environment() as env:
+/usr/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_integration.py:249: in isolated_environment
+    raise RuntimeError("Failed to start test environment")
+E   RuntimeError: Failed to start test environment</error></testcase><testcase classname="tests.test_integration.TestContainerIntegration" name="test_web_server_response" time="1.883"><error message="failed on setup with &quot;RuntimeError: Failed to start test environment&quot;">tests/test_integration.py:321: in isolated_environment
+    with compose_manager.isolated_environment() as env:
+/usr/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_integration.py:249: in isolated_environment
+    raise RuntimeError("Failed to start test environment")
+E   RuntimeError: Failed to start test environment</error></testcase><testcase classname="tests.test_integration.TestContainerIntegration" name="test_dns_server_functionality" time="1.833"><error message="failed on setup with &quot;RuntimeError: Failed to start test environment&quot;">tests/test_integration.py:321: in isolated_environment
+    with compose_manager.isolated_environment() as env:
+/usr/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_integration.py:249: in isolated_environment
+    raise RuntimeError("Failed to start test environment")
+E   RuntimeError: Failed to start test environment</error></testcase><testcase classname="tests.test_integration.TestContainerIntegration" name="test_mail_server_ports" time="1.893"><error message="failed on setup with &quot;RuntimeError: Failed to start test environment&quot;">tests/test_integration.py:321: in isolated_environment
+    with compose_manager.isolated_environment() as env:
+/usr/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_integration.py:249: in isolated_environment
+    raise RuntimeError("Failed to start test environment")
+E   RuntimeError: Failed to start test environment</error></testcase></testsuite></testsuites>

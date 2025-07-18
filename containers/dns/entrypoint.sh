@@ -13,8 +13,9 @@ log "Starting DNS container entrypoint"
 
 # Create necessary directories (as root first)
 mkdir -p /var/log/named /var/run/named /var/cache/bind
-chown -R bind:bind /var/log/named /var/run/named
-# /var/cache/bind is owned by bind in the base system, don't try to change it
+chown -R bind:bind /var/log/named /var/run/named /var/cache/bind
+# Ensure bind user can write to cache directory
+chmod 755 /var/cache/bind
 
 # Ensure zone directory exists and has proper permissions
 mkdir -p /data/dns/zones
@@ -92,8 +93,8 @@ trap cleanup SIGTERM SIGINT
 
 # Start BIND in the background
 log "Starting BIND DNS server"
-# Run as root without specifying user to avoid setgid issues
-named -g -c /etc/bind/named.conf &
+# Run as bind user for security
+named -g -c /etc/bind/named.conf -u bind &
 BIND_PID=$!
 
 log "BIND DNS server started with PID: $BIND_PID"

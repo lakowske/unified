@@ -6,6 +6,7 @@ server is properly configured and serving the correct records for email authenti
 """
 
 import logging
+import os
 import re
 import socket
 import subprocess
@@ -233,17 +234,30 @@ class DKIMValidator:
 @pytest.fixture
 def dns_resolver():
     """Create DNS resolver instance."""
-    return DNSResolver()
+    # Use test DNS port when in test environment
+    dns_port = 5354 if os.environ.get("ENVIRONMENT") == "test" else 53
+    return DNSResolver(dns_port=dns_port)
 
 
 @pytest.fixture
 def mail_config():
     """Mail configuration for testing."""
+    # Use environment variables if available, otherwise fall back to defaults
+    environment = os.environ.get("ENVIRONMENT", "dev")
+    
+    # Adjust ports for test environment
+    if environment == "test":
+        dns_port = 5354
+        mail_server_ip = "127.0.0.1"  # Test environment uses localhost
+    else:
+        dns_port = 53
+        mail_server_ip = "192.168.0.156"
+    
     return {
-        "mail_domain": "lab.sethlakowske.com",
-        "mail_server_ip": "192.168.0.156",
-        "dns_server": "localhost",
-        "dns_port": 53,
+        "mail_domain": os.environ.get("MAIL_DOMAIN", "lab.sethlakowske.com"),
+        "mail_server_ip": os.environ.get("MAIL_SERVER_IP", mail_server_ip),
+        "dns_server": os.environ.get("DNS_SERVER", "localhost"),
+        "dns_port": int(os.environ.get("DNS_PORT", str(dns_port))),
     }
 
 
