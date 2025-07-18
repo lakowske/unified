@@ -28,12 +28,11 @@ Options:
 import argparse
 import json
 import logging
-import os
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pytest
 
@@ -43,12 +42,7 @@ logger = logging.getLogger(__name__)
 class IntegrationTestRunner:
     """Comprehensive integration test runner for unified infrastructure."""
 
-    def __init__(
-        self,
-        project_dir: Path,
-        environment: str = "test",
-        output_dir: Optional[Path] = None
-    ):
+    def __init__(self, project_dir: Path, environment: str = "test", output_dir: Optional[Path] = None):
         self.project_dir = project_dir
         self.environment = environment
         self.output_dir = output_dir or (project_dir / "test_reports")
@@ -63,7 +57,7 @@ class IntegrationTestRunner:
     def setup_logging(self, verbose: bool = False):
         """Setup comprehensive logging for test run."""
         log_level = logging.DEBUG if verbose else logging.INFO
-        
+
         # Create log file with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_file = self.output_dir / f"integration_test_{timestamp}.log"
@@ -151,7 +145,8 @@ class IntegrationTestRunner:
             "-v",
             "--tb=short",
             "--disable-warnings",
-            "-m", "performance",
+            "-m",
+            "performance",
             str(self.project_dir / "tests" / "test_integration.py::TestPerformanceRegression"),
             "--junit-xml=" + str(self.output_dir / "performance_regression_results.xml"),
         ]
@@ -206,7 +201,7 @@ class IntegrationTestRunner:
         perf_report_file = self.project_dir / "test_performance_report.json"
         if perf_report_file.exists():
             try:
-                with open(perf_report_file, "r") as f:
+                with open(perf_report_file) as f:
                     self.performance_metrics = json.load(f)
                 logger.info(f"Loaded {len(self.performance_metrics)} performance metrics")
             except Exception as e:
@@ -319,10 +314,15 @@ class IntegrationTestRunner:
 
             # Group metrics by category
             startup_metrics = {k: v for k, v in self.performance_metrics.items() if "startup" in k}
-            connectivity_metrics = {k: v for k, v in self.performance_metrics.items() if "connectivity" in k or "response" in k}
+            connectivity_metrics = {
+                k: v for k, v in self.performance_metrics.items() if "connectivity" in k or "response" in k
+            }
             query_metrics = {k: v for k, v in self.performance_metrics.items() if "query" in k}
-            other_metrics = {k: v for k, v in self.performance_metrics.items() 
-                           if k not in startup_metrics and k not in connectivity_metrics and k not in query_metrics}
+            other_metrics = {
+                k: v
+                for k, v in self.performance_metrics.items()
+                if k not in startup_metrics and k not in connectivity_metrics and k not in query_metrics
+            }
 
             metric_categories = [
                 ("Startup Metrics", startup_metrics),
@@ -344,7 +344,7 @@ class IntegrationTestRunner:
                 max_time = max(all_times)
                 min_time = min(all_times)
 
-                report.append(f"\nPerformance Summary:")
+                report.append("\nPerformance Summary:")
                 report.append(f"  Average operation time: {avg_time:.3f}s")
                 report.append(f"  Fastest operation: {min_time:.3f}s")
                 report.append(f"  Slowest operation: {max_time:.3f}s")
@@ -373,16 +373,16 @@ class IntegrationTestRunner:
             report.append("• Consider running performance regression tests regularly")
             report.append("• Monitor performance metrics for trends")
         else:
-            failed_suites = [k for k, v in self.test_results.items() 
-                           if k != "overall" and not v.get("passed", False)]
+            failed_suites = [k for k, v in self.test_results.items() if k != "overall" and not v.get("passed", False)]
             if failed_suites:
                 report.append(f"• Investigate failed test suites: {', '.join(failed_suites)}")
                 report.append("• Check service logs for errors")
                 report.append("• Verify container images are built correctly")
 
         if self.performance_metrics:
-            slow_operations = {k: v for k, v in self.performance_metrics.items() 
-                             if isinstance(v, (int, float)) and v > 10.0}
+            slow_operations = {
+                k: v for k, v in self.performance_metrics.items() if isinstance(v, (int, float)) and v > 10.0
+            }
             if slow_operations:
                 report.append("• Performance attention needed for:")
                 for op, time_val in slow_operations.items():
@@ -399,12 +399,16 @@ class IntegrationTestRunner:
         # Save JSON results
         results_file = self.output_dir / f"integration_test_results_{timestamp}.json"
         with open(results_file, "w") as f:
-            json.dump({
-                "test_results": self.test_results,
-                "performance_metrics": self.performance_metrics,
-                "environment": self.environment,
-                "timestamp": timestamp,
-            }, f, indent=2)
+            json.dump(
+                {
+                    "test_results": self.test_results,
+                    "performance_metrics": self.performance_metrics,
+                    "environment": self.environment,
+                    "timestamp": timestamp,
+                },
+                f,
+                indent=2,
+            )
 
         logger.info(f"Test results saved to: {results_file}")
 
@@ -424,56 +428,24 @@ def main():
     parser = argparse.ArgumentParser(
         description="Unified Infrastructure Integration Test Runner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__
+        epilog=__doc__,
     )
 
-    parser.add_argument(
-        "--environment",
-        default="test",
-        help="Test environment name (default: test)"
-    )
+    parser.add_argument("--environment", default="test", help="Test environment name (default: test)")
 
-    parser.add_argument(
-        "--performance",
-        action="store_true",
-        help="Run performance baseline tests"
-    )
+    parser.add_argument("--performance", action="store_true", help="Run performance baseline tests")
 
-    parser.add_argument(
-        "--regression",
-        action="store_true",
-        help="Run performance regression tests"
-    )
+    parser.add_argument("--regression", action="store_true", help="Run performance regression tests")
 
-    parser.add_argument(
-        "--dns-integration",
-        action="store_true",
-        help="Run DNS mail integration tests"
-    )
+    parser.add_argument("--dns-integration", action="store_true", help="Run DNS mail integration tests")
 
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
-    parser.add_argument(
-        "--keep-environment",
-        action="store_true",
-        help="Keep test environment running after tests"
-    )
+    parser.add_argument("--keep-environment", action="store_true", help="Keep test environment running after tests")
 
-    parser.add_argument(
-        "--report",
-        action="store_true",
-        help="Generate and display detailed test report"
-    )
+    parser.add_argument("--report", action="store_true", help="Generate and display detailed test report")
 
-    parser.add_argument(
-        "--output",
-        type=Path,
-        help="Output directory for reports and logs"
-    )
+    parser.add_argument("--output", type=Path, help="Output directory for reports and logs")
 
     args = parser.parse_args()
 
@@ -481,11 +453,7 @@ def main():
     project_dir = Path(__file__).parent.parent
 
     # Create test runner
-    runner = IntegrationTestRunner(
-        project_dir=project_dir,
-        environment=args.environment,
-        output_dir=args.output
-    )
+    runner = IntegrationTestRunner(project_dir=project_dir, environment=args.environment, output_dir=args.output)
 
     # Setup logging
     runner.setup_logging(verbose=args.verbose)

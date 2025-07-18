@@ -4,15 +4,13 @@ This module provides comprehensive integration tests that validate the entire
 infrastructure stack including database, web server, mail server, and DNS services.
 """
 
+import json
 import logging
 import subprocess
 import time
-import json
-import signal
-import psutil
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from contextlib import contextmanager
+from pathlib import Path
+from typing import Dict, List
 
 import pytest
 
@@ -70,19 +68,12 @@ class DockerComposeManager:
         cmd = ["docker", "compose", "-f", str(self.compose_file)] + command
         logger.info(f"Running command: {' '.join(cmd)}")
 
-        return subprocess.run(
-            cmd,
-            cwd=self.project_dir,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=timeout
-        )
+        return subprocess.run(cmd, cwd=self.project_dir, env=env, capture_output=True, text=True, timeout=timeout)
 
     def build_images(self) -> bool:
         """Build all required container images."""
         logger.info("Building container images for testing...")
-        
+
         # Use the parallel build system
         build_script = self.project_dir / "scripts" / "build-containers.py"
         if build_script.exists():
@@ -91,17 +82,15 @@ class DockerComposeManager:
                 cwd=self.project_dir,
                 capture_output=True,
                 text=True,
-                timeout=1800  # 30 minutes for builds
+                timeout=1800,  # 30 minutes for builds
             )
             if result.returncode == 0:
                 logger.info("Container images built successfully")
                 return True
-            else:
-                logger.error(f"Container build failed: {result.stderr}")
-                return False
-        else:
-            logger.warning("Build script not found, assuming images exist")
-            return True
+            logger.error(f"Container build failed: {result.stderr}")
+            return False
+        logger.warning("Build script not found, assuming images exist")
+        return True
 
     def start_environment(self, run_volume_setup: bool = True) -> bool:
         """Start the test environment."""
@@ -113,11 +102,11 @@ class DockerComposeManager:
             if result.returncode != 0:
                 logger.error(f"Volume setup failed: {result.stderr}")
                 return False
-            
+
             # Wait for volume setup to complete
             logger.info("Waiting for volume setup to complete...")
             time.sleep(10)
-            
+
             # Stop volume setup container since it's a one-time init
             self._run_compose_command(["stop", "volume-setup"])
 
@@ -179,9 +168,8 @@ class DockerComposeManager:
         if result.returncode == 0:
             logger.info("Database migrations completed successfully")
             return True
-        else:
-            logger.error(f"Database migrations failed: {result.stderr}")
-            return False
+        logger.error(f"Database migrations failed: {result.stderr}")
+        return False
 
     def stop_environment(self, remove_volumes: bool = True) -> bool:
         """Stop the test environment."""
@@ -322,7 +310,7 @@ def performance_tracker():
 def isolated_environment(compose_manager, performance_tracker):
     """Provide an isolated test environment for each test."""
     performance_tracker.start_timer("environment_setup")
-    
+
     with compose_manager.isolated_environment() as env:
         setup_time = performance_tracker.end_timer("environment_setup")
         logger.info(f"Test environment setup completed in {setup_time:.2f} seconds")
@@ -335,7 +323,7 @@ class TestContainerIntegration:
     def test_containers_start_successfully(self, isolated_environment, performance_tracker):
         """Test that all containers start and become healthy."""
         performance_tracker.start_timer("container_startup")
-        
+
         status = isolated_environment.get_service_status()
         startup_time = performance_tracker.end_timer("container_startup")
 
@@ -360,8 +348,7 @@ class TestContainerIntegration:
 
         # Test database connection
         result = isolated_environment.execute_in_service(
-            "postgres", 
-            ["psql", "-U", "unified_test_user", "-d", "unified_test", "-c", "SELECT version();"]
+            "postgres", ["psql", "-U", "unified_test_user", "-d", "unified_test", "-c", "SELECT version();"]
         )
 
         connectivity_time = performance_tracker.end_timer("database_connectivity")
@@ -377,20 +364,14 @@ class TestContainerIntegration:
         performance_tracker.start_timer("web_server_response")
 
         # Test web server health endpoint
-        result = isolated_environment.execute_in_service(
-            "apache",
-            ["curl", "-f", "-s", "http://localhost/health"]
-        )
+        result = isolated_environment.execute_in_service("apache", ["curl", "-f", "-s", "http://localhost/health"])
 
         response_time = performance_tracker.end_timer("web_server_response")
 
         # Note: Health endpoint might not exist yet, so we check if Apache is responding
         if result.returncode != 0:
             # Try basic connection instead
-            result = isolated_environment.execute_in_service(
-                "apache",
-                ["curl", "-f", "-s", "http://localhost/"]
-            )
+            result = isolated_environment.execute_in_service("apache", ["curl", "-f", "-s", "http://localhost/"])
 
         performance_tracker.record_metric("web_server_response_time", response_time)
         logger.info(f"Web server response test completed in {response_time:.2f} seconds")
@@ -400,10 +381,7 @@ class TestContainerIntegration:
         performance_tracker.start_timer("dns_query")
 
         # Test DNS server with basic query
-        result = isolated_environment.execute_in_service(
-            "bind",
-            ["dig", "@localhost", "-p", "53", ".", "NS", "+short"]
-        )
+        result = isolated_environment.execute_in_service("bind", ["dig", "@localhost", "-p", "53", ".", "NS", "+short"])
 
         query_time = performance_tracker.end_timer("dns_query")
 
@@ -420,10 +398,7 @@ class TestContainerIntegration:
         available_ports = []
 
         for port in mail_ports:
-            result = isolated_environment.execute_in_service(
-                "mail",
-                ["nc", "-z", "localhost", str(port)]
-            )
+            result = isolated_environment.execute_in_service("mail", ["nc", "-z", "localhost", str(port)])
             if result.returncode == 0:
                 available_ports.append(port)
 
@@ -447,8 +422,7 @@ class TestServiceIntegration:
 
         # Check for migration tables or basic schema
         result = isolated_environment.execute_in_service(
-            "postgres",
-            ["psql", "-U", "unified_test_user", "-d", "unified_test", "-c", "\\dt"]
+            "postgres", ["psql", "-U", "unified_test_user", "-d", "unified_test", "-c", "\\dt"]
         )
 
         check_time = performance_tracker.end_timer("migration_status_check")
@@ -523,12 +497,11 @@ class TestPerformanceRegression:
 
         for i in range(5):
             performance_tracker.start_timer(f"db_query_{i}")
-            
+
             result = isolated_environment.execute_in_service(
-                "postgres",
-                ["psql", "-U", "unified_test_user", "-d", "unified_test", "-c", "SELECT NOW();"]
+                "postgres", ["psql", "-U", "unified_test_user", "-d", "unified_test", "-c", "SELECT NOW();"]
             )
-            
+
             query_time = performance_tracker.end_timer(f"db_query_{i}")
             query_times.append(query_time)
 
@@ -545,7 +518,6 @@ class TestPerformanceRegression:
     def test_concurrent_service_access(self, isolated_environment, performance_tracker):
         """Test concurrent access to multiple services."""
         import concurrent.futures
-        import threading
 
         performance_tracker.start_timer("concurrent_access")
 

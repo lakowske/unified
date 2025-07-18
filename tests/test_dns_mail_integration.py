@@ -244,7 +244,7 @@ def mail_config():
     """Mail configuration for testing."""
     # Use environment variables if available, otherwise fall back to defaults
     environment = os.environ.get("ENVIRONMENT", "dev")
-    
+
     # Adjust ports for test environment
     if environment == "test":
         dns_port = 5354
@@ -252,7 +252,7 @@ def mail_config():
     else:
         dns_port = 53
         mail_server_ip = "192.168.0.156"
-    
+
     return {
         "mail_domain": os.environ.get("MAIL_DOMAIN", "lab.sethlakowske.com"),
         "mail_server_ip": os.environ.get("MAIL_SERVER_IP", mail_server_ip),
