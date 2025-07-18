@@ -1,4 +1,4 @@
-FROM localhost/poststack/base-debian:latest
+FROM localhost/unified/base-debian:latest
 
 # Install additional tools needed for volume setup
 # Note: passwd package provides shadow utilities (useradd, groupadd, etc.)

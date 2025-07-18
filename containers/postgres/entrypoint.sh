@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# PostgreSQL Entrypoint Script for Poststack
+# PostgreSQL Entrypoint Script for Unified
 # Configures and starts PostgreSQL with environment-driven settings
 
 # Function to log with timestamp

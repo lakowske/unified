@@ -1,0 +1,126 @@
+{
+  "summary": {
+    "total_tests": 10,
+    "passed_tests": 10,
+    "failed_tests": 0,
+    "total_duration": 1.7539897680282592,
+    "average_duration": 0.17539897680282593
+  },
+  "baselines": {
+    "api_response_time": 0.5,
+    "database_query_time": 0.1,
+    "container_startup_time": 30.0,
+    "concurrent_api_requests": 10,
+    "database_connection_time": 0.05
+  },
+  "results": {
+    "timestamp": "2025-07-18T08:43:53.140008",
+    "version": "1.0.0",
+    "environment": "development",
+    "tests": {
+      "api_response_time_baseline": {
+        "duration": 0.003122758865356445,
+        "success": true,
+        "details": {
+          "average_time": 0.003122758865356445,
+          "min_time": 0.0028924942016601562,
+          "max_time": 0.003511667251586914,
+          "requests_count": 10
+        },
+        "timestamp": "2025-07-18T08:43:53.181820"
+      },
+      "database_simple_select": {
+        "duration": 0.05152153968811035,
+        "success": true,
+        "details": {
+          "query": "SELECT 1;"
+        },
+        "timestamp": "2025-07-18T08:43:53.234022"
+      },
+      "database_user_count": {
+        "duration": 0.06238818168640137,
+        "success": true,
+        "details": {
+          "query": "SELECT COUNT(*) FROM unified.users;"
+        },
+        "timestamp": "2025-07-18T08:43:53.296430"
+      },
+      "database_recent_users": {
+        "duration": 0.05290365219116211,
+        "success": true,
+        "details": {
+          "query": "SELECT username, created_at FROM unified.users ORDER BY created_at DESC LIMIT 10;"
+        },
+        "timestamp": "2025-07-18T08:43:53.349354"
+      },
+      "database_user_with_roles": {
+        "duration": 0.051720619201660156,
+        "success": true,
+        "details": {
+          "query": "SELECT u.username, COUNT(ur.role_name) as role_count\n                FROM unified.users u\n                LEFT JOIN unified.user_roles ur ON u.id = ur.user_id\n                GROUP BY u.username\n                LIMIT 10;"
+        },
+        "timestamp": "2025-07-18T08:43:53.401090"
+      },
+      "database_performance_baseline": {
+        "duration": 0.054633498191833496,
+        "success": true,
+        "details": {
+          "total_queries": 4,
+          "successful_queries": 4,
+          "average_time": 0.054633498191833496
+        },
+        "timestamp": "2025-07-18T08:43:53.401103"
+      },
+      "concurrent_api_performance_1": {
+        "duration": 0.0044023990631103516,
+        "success": true,
+        "details": {
+          "concurrency": 1,
+          "successful_requests": 1,
+          "total_requests": 1,
+          "average_response_time": 0.003859996795654297,
+          "requests_per_second": 227.14887625236935
+        },
+        "timestamp": "2025-07-18T08:43:53.406123"
+      },
+      "concurrent_api_performance_5": {
+        "duration": 0.0055084228515625,
+        "success": true,
+        "details": {
+          "concurrency": 5,
+          "successful_requests": 5,
+          "total_requests": 5,
+          "average_response_time": 0.0036536216735839843,
+          "requests_per_second": 907.7008310249307
+        },
+        "timestamp": "2025-07-18T08:43:53.411646"
+      },
+      "concurrent_api_performance_10": {
+        "duration": 1.4038805961608887,
+        "success": true,
+        "details": {
+          "concurrency": 10,
+          "successful_requests": 10,
+          "total_requests": 10,
+          "average_response_time": 0.18270583152770997,
+          "requests_per_second": 7.123112910988601
+        },
+        "timestamp": "2025-07-18T08:43:54.815547"
+      },
+      "end_to_end_performance": {
+        "duration": 0.06390810012817383,
+        "success": true,
+        "details": {
+          "api_creation_time": 0.007811784744262695,
+          "database_verification_time": 0.05609631538391113,
+          "total_time": 0.06390810012817383,
+          "user_created": true
+        },
+        "timestamp": "2025-07-18T08:44:03.207721"
+      }
+    }
+  },
+  "recommendations": [
+    "\ud83d\udc0c concurrent_api_performance_10: API response time (1.404s) exceeds baseline (0.5s)"
+  ]
+}

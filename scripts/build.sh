@@ -36,10 +36,10 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# Check if podman is available
-if ! command -v podman &> /dev/null; then
-    echo -e "${RED}❌ Error: podman is required but not found${NC}"
-    echo "Please install Podman to build containers"
+# Check if docker is available
+if ! command -v docker &> /dev/null; then
+    echo -e "${RED}❌ Error: docker is required but not found${NC}"
+    echo "Please install Docker to build containers"
     exit 1
 fi
 
@@ -62,7 +62,7 @@ case "${1:-}" in
         echo ""
         echo "Build order:"
         echo "  1. base-debian (shared base image)"
-        echo "  2. postgres, poststack-cli, volume-setup, apache, mail, dns (parallel)"
+        echo "  2. postgres, volume-setup, apache, mail, dns (parallel)"
         echo ""
         echo "Logs:"
         echo "  - Build logs: logs/build-{container}-{timestamp}.log"
@@ -78,9 +78,8 @@ from pathlib import Path
 
 # Check required files exist
 dockerfiles = [
-    '/home/seth/Software/dev/poststack/containers/base-debian/Dockerfile',
-    '/home/seth/Software/dev/poststack/containers/postgres/Dockerfile',
-    '/home/seth/Software/dev/unified/containers/poststack/Dockerfile',
+    '/home/seth/Software/dev/unified/containers/base-debian/Dockerfile',
+    '/home/seth/Software/dev/unified/containers/postgres/Dockerfile',
     '/home/seth/Software/dev/unified/containers/volume-setup/Dockerfile',
     '/home/seth/Software/dev/unified/containers/apache/Dockerfile',
     '/home/seth/Software/dev/unified/containers/mail/Dockerfile',

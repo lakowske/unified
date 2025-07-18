@@ -1,9 +1,9 @@
-# PostgreSQL container for Poststack
+# PostgreSQL container for Unified
 # Based on base-debian with PostgreSQL server and client tools
-FROM localhost/poststack/base-debian:latest
+FROM localhost/unified/base-debian:latest
 
 # Metadata
-LABEL maintainer="Poststack Contributors"
+LABEL maintainer="Unified Contributors"
 LABEL version="1.0.0"
 LABEL description="PostgreSQL server container with debugging tools and certificate access"
 

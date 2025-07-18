@@ -2,10 +2,10 @@
 """Unified Infrastructure Integration Test Runner
 
 This script runs comprehensive integration tests for the unified infrastructure
-using podman-compose to create isolated test environments.
+using docker compose to create isolated test environments.
 
 Features:
-- Isolated test environment creation with podman-compose
+- Isolated test environment creation with docker compose
 - Performance baseline measurement and tracking
 - Comprehensive service integration testing
 - Detailed reporting and metrics collection

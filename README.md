@@ -89,6 +89,101 @@ unified/
 └── README.md                       # This file
 ```
 
+## Docker Compose Infrastructure
+
+This project includes a comprehensive Docker Compose setup for development and production environments with mail, DNS, web, and database services.
+
+### Starting the Environment
+
+```bash
+# Start development environment
+docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# Stop development environment
+docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml down
+
+# View logs
+docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml logs [service]
+```
+
+### User Management
+
+The system provides REST API endpoints for user management. Get the API key from the running container:
+
+```bash
+# Get API key for authenticated requests
+API_KEY=$(docker exec apache-dev cat /var/local/unified_api_key)
+```
+
+#### Create a User
+
+```bash
+# Create an admin user
+curl -X POST http://localhost:8080/api/v1/admin/create_user \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -d '{
+    "username": "admin",
+    "password": "secure-password",
+    "email": "admin@example.com",
+    "role": "admin"
+  }'
+
+# Create a regular user
+curl -X POST http://localhost:8080/api/v1/admin/create_user \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -d '{
+    "username": "testuser",
+    "password": "secure-password",
+    "email": "user@example.com",
+    "role": "user"
+  }'
+```
+
+#### List Users
+
+```bash
+# List all users
+curl -X GET http://localhost:8080/api/v1/admin/list_users \
+  -H "X-API-Key: $API_KEY"
+
+# List users with specific role
+curl -X GET "http://localhost:8080/api/v1/admin/list_users?role=admin" \
+  -H "X-API-Key: $API_KEY"
+```
+
+#### Delete a User
+
+```bash
+# Delete user by username
+curl -X DELETE http://localhost:8080/api/v1/admin/delete_user \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -d '{"username": "testuser"}'
+
+# Delete user by ID
+curl -X DELETE http://localhost:8080/api/v1/admin/delete_user \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -d '{"user_id": "123"}'
+```
+
+### Database Management
+
+The project uses Flyway for database migrations:
+
+```bash
+# Apply database migrations
+docker compose run --rm flyway migrate
+
+# Check migration status
+docker compose run --rm flyway info
+
+# Validate migrations
+docker compose run --rm flyway validate
+```
+
 ## Contributing
 
 1. Fork the repository

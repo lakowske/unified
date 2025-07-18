@@ -78,19 +78,19 @@ class ContainerBuilder:
         return {
             "base-debian": ContainerConfig(
                 name="base-debian",
-                dockerfile_path="/home/seth/Software/dev/poststack/containers/base-debian/Dockerfile",
-                build_context="/home/seth/Software/dev/poststack/containers/base-debian",
-                image_tag="localhost/poststack/base-debian:latest",
+                dockerfile_path="/home/seth/Software/dev/unified/containers/base-debian/Dockerfile",
+                build_context="/home/seth/Software/dev/unified/containers/base-debian",
+                image_tag="localhost/unified/base-debian:latest",
                 dependencies=[],
                 description="Shared base image with Python, tools, and certificate management",
             ),
             "postgres": ContainerConfig(
                 name="postgres",
-                dockerfile_path="/home/seth/Software/dev/poststack/containers/postgres/Dockerfile",
-                build_context="/home/seth/Software/dev/poststack",
-                image_tag="localhost/poststack/postgres:latest",
+                dockerfile_path="/home/seth/Software/dev/unified/containers/postgres/Dockerfile",
+                build_context="/home/seth/Software/dev/unified",
+                image_tag="localhost/unified/postgres:latest",
                 dependencies=["base-debian"],
-                description="PostgreSQL server with poststack tools",
+                description="PostgreSQL server with unified tools",
             ),
             "volume-setup": ContainerConfig(
                 name="volume-setup",
@@ -164,13 +164,13 @@ class ContainerBuilder:
 
         # Check if image already exists
         try:
-            check_cmd = ["podman", "images", config.image_tag, "--format", "{{.Tag}}"]
+            check_cmd = ["docker", "images", config.image_tag, "--format", "{{.Tag}}"]
             check_result = subprocess.run(check_cmd, capture_output=True, text=True)
             if check_result.returncode == 0 and check_result.stdout.strip():
                 logger.info(f"✅ Image already exists: {container_name} - skipping build")
 
                 # Get existing image info
-                size_cmd = ["podman", "images", config.image_tag, "--format", "{{.Size}}"]
+                size_cmd = ["docker", "images", config.image_tag, "--format", "{{.Size}}"]
                 size_result = subprocess.run(size_cmd, capture_output=True, text=True)
                 image_size = size_result.stdout.strip() if size_result.returncode == 0 else "Unknown"
 
@@ -197,7 +197,7 @@ class ContainerBuilder:
 
         try:
             # Build the container
-            cmd = ["podman", "build", "-f", config.dockerfile_path, config.build_context, "-t", config.image_tag]
+            cmd = ["docker", "build", "-f", config.dockerfile_path, config.build_context, "-t", config.image_tag]
 
             # Add build args if specified
             if config.build_args:
@@ -242,7 +242,7 @@ class ContainerBuilder:
                 if process.returncode == 0:
                     # Get image size
                     try:
-                        size_cmd = ["podman", "images", config.image_tag, "--format", "{{.Size}}"]
+                        size_cmd = ["docker", "images", config.image_tag, "--format", "{{.Size}}"]
                         size_result = subprocess.run(size_cmd, capture_output=True, text=True)
                         image_size = size_result.stdout.strip() if size_result.returncode == 0 else "Unknown"
                     except Exception as e:

@@ -17,9 +17,9 @@ export APACHE_LOG_DIR=${APACHE_LOG_DIR:-/data/logs/apache}
 # Database configuration - use standard DB_ environment variables
 export DB_HOST=${DB_HOST:-localhost}
 export DB_PORT=${DB_PORT:-5432}
-export DB_NAME=${DB_NAME:-poststack}
-export DB_USER=${DB_USER:-poststack}
-export DB_PASSWORD=${DB_PASSWORD:-poststack_dev}
+export DB_NAME=${DB_NAME:-unified}
+export DB_USER=${DB_USER:-unified}
+export DB_PASSWORD=${DB_PASSWORD:-unified_dev}
 export DB_SCHEMA=${DB_SCHEMA:-unified}
 
 # Legacy UNIFIED_DB_* variables for backward compatibility
@@ -177,16 +177,16 @@ done
 
 if [ $attempt -eq $max_attempts ]; then
     echo "ERROR: Database or unified schema not ready after $max_attempts attempts"
-    echo "Please ensure the database migration has been applied with: poststack db migrate"
+    echo "Please ensure the database migration has been applied with: docker compose run --rm flyway migrate"
     exit 1
 fi
 
 # Web content is already copied by Dockerfile, no need to create index.php
 
-# Generate API key for poststack service operations
+# Generate API key for unified service operations
 echo "Generating API key for service operations..."
 API_KEY=$(openssl rand -hex 32)
-API_KEY_FILE="/var/local/poststack_api_key"
+API_KEY_FILE="/var/local/unified_api_key"
 
 # Create directory if it doesn't exist
 mkdir -p /var/local

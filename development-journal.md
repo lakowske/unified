@@ -103,6 +103,60 @@ This document tracks significant issues, roadblocks, and solutions encountered d
 
 **Impact**: Cleaner build process with fewer dependencies to maintain
 
+### 6. pytest Testing Framework Modernization (July 2025)
+
+**Issue**: Testing framework had gaps after poststack removal and needed comprehensive updates
+
+- Custom pytest markers causing warnings due to improper registration
+- Integration tests creating conflicting isolated environments
+- API endpoint tests failing due to missing email fields and JSON parsing issues
+- Database performance tests targeting wrong schema (public vs unified)
+- Limited performance testing and reporting capabilities
+
+**Root Cause**: Testing framework not updated after infrastructure changes and missing modern testing practices
+
+**Solution**: Complete pytest framework modernization
+
+- Created `conftest.py` with proper marker registration using `pytest_configure` hook
+- Fixed integration tests to use development environment instead of creating conflicts
+- Enhanced API endpoint tests with comprehensive email handling and safe JSON parsing
+- Corrected database schema references from 'public' to 'unified' schema
+- Added comprehensive performance testing suite with automated reporting and baselines
+- Implemented proper test isolation strategies and error handling
+
+**Impact**: Robust testing framework with comprehensive coverage, performance benchmarks, and reliable test isolation
+
+### 7. Environment Management System Implementation (July 2025)
+
+**Issue**: Need for programmatic environment management and network queries
+
+- No systematic way to query "what port is the DNS container bound to?" and similar questions
+- Creating isolated test environments was manual and error-prone
+- Feature branch environments could interfere with each other
+- No unified interface for environment lifecycle management
+- Missing network topology visibility and service discovery
+
+**Root Cause**: Lack of comprehensive environment management tools for Docker Compose orchestration
+
+**Solution**: Built complete environment management system
+
+- **EnvironmentConfig**: Parses .env files and docker-compose.yml with variable substitution
+- **NetworkInfo**: Provides network queries (ports, URLs, topology, connectivity tests)
+- **EnvironmentManager**: Handles environment lifecycle (create, start, stop, remove)
+- **EnvironmentIsolation**: Creates isolated environments with automatic port conflict resolution
+- **CLI Tools**: Command-line interfaces for environment and query operations
+- **Comprehensive Testing**: Full test coverage with mocked Docker operations
+
+**Key Capabilities**:
+
+- Answer specific queries: "DNS container bound to port 5354 (bind service)"
+- Create isolated test environments with automatic port offsets
+- Generate feature branch environments that don't interfere
+- Query service URLs, network topology, and connectivity
+- Validate environment configurations
+
+**Impact**: Complete programmatic control over environment management with CLI tools and Python APIs
+
 ## Key Lessons Learned
 
 1. **Industry Standards Over Custom Solutions**: Replacing custom poststack with Flyway eliminated massive maintenance burden while improving reliability
@@ -115,9 +169,19 @@ This document tracks significant issues, roadblocks, and solutions encountered d
 
 1. **Documentation Value**: Clear development journals help track decisions and solutions for future reference
 
+1. **Proper Test Isolation**: Using existing development environments instead of creating conflicting isolated environments improves test reliability
+
+1. **Environment Management Benefits**: Programmatic environment control enables rapid development iteration and reliable testing workflows
+
+1. **CLI Tools Value**: Well-designed command-line interfaces make complex operations accessible and scriptable
+
 ## Ongoing Considerations
 
 - Monitor Flyway migration performance as schema complexity grows
 - Consider DNS container optimization for larger zone files
 - Evaluate container resource limits based on production usage patterns
 - Plan for horizontal scaling of individual services as needed
+- Expand performance testing baselines as application complexity increases
+- Consider automating environment cleanup for long-running CI/CD pipelines
+- Evaluate adding service health monitoring integration to environment management
+- Plan for multi-environment deployment coordination using the new management tools

@@ -23,7 +23,6 @@ classifiers = [
 ]
 dependencies = [
     "requests",
-    "poststack @ file:///home/seth/Software/dev/poststack",
     "psycopg2-binary",
 ]
 
@@ -182,4 +181,8 @@ addopts = [
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
+    "performance: marks tests as performance tests",
+    "api: marks tests as API endpoint tests",
+    "database: marks tests as database schema tests",
+    "container: marks tests as container build tests",
 ]

@@ -1,4 +1,4 @@
-FROM localhost/poststack/base-debian:latest
+FROM localhost/unified/base-debian:latest
 
 # Install BIND DNS server and PostgreSQL client
 RUN apt-get update && apt-get install -y \

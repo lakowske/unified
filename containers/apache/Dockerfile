@@ -1,7 +1,7 @@
 # Apache Web Server Container for Unified Project
-# Based on poststack/base-debian for consistency
+# Based on unified/base-debian for consistency
 
-FROM localhost/poststack/base-debian:latest
+FROM localhost/unified/base-debian:latest
 
 # Install Apache and required modules
 RUN apt-get update && apt-get install -y --no-install-recommends \

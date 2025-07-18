@@ -29,46 +29,20 @@ class DockerComposeManager:
 
     def _run_compose_command(self, command: List[str], timeout: int = 300) -> subprocess.CompletedProcess:
         """Run a docker compose command with proper environment setup."""
-        env = {
-            "ENVIRONMENT": self.environment,
-            "DB_NAME": f"unified_{self.environment}",
-            "DB_USER": f"unified_{self.environment}_user",
-            "DB_PASSWORD": f"{self.environment}_password123",
-            "DB_PORT": "5432",
-            "SERVER_NAME": "test.lab.sethlakowske.com",
-            "SERVER_ADMIN": "admin@lab.sethlakowske.com",
-            "APACHE_LOG_LEVEL": "debug",
-            "SSL_ENABLED": "false",
-            "SSL_REDIRECT": "false",
-            "APACHE_HOST_PORT": "8080",
-            "APACHE_HTTPS_PORT": "8443",
-            "MAIL_DOMAIN": "lab.sethlakowske.com",
-            "MAIL_SERVER_IP": "127.0.0.1",
-            "MAIL_LOG_LEVEL": "debug",
-            "VMAIL_UID": "1000",
-            "VMAIL_GID": "1000",
-            "CERT_TYPE_PREFERENCE": "letsencrypt",
-            "LOG_LEVEL": "debug",
-            "DEBUG_MODE": "true",
-            "APP_VERSION": "test",
-            "DNS_LOG_LEVEL": "debug",
-            "DNS_FORWARDERS": "8.8.8.8,1.1.1.1",
-            "DNS_ALLOW_QUERY": "any",
-            "DNS_RECURSION": "yes",
-            "DNS_CACHE_SIZE": "50M",
-            "DNS_MAX_CACHE_TTL": "86400",
-            "BIND_PORT": "5354",
-            "MAIL_SMTP_PORT": "2525",
-            "MAIL_IMAP_PORT": "1144",
-            "MAIL_IMAPS_PORT": "9933",
-            "MAIL_SMTPS_PORT": "4465",
-            "MAIL_SUBMISSION_PORT": "5587",
-        }
+        # Use environment-specific files
+        env_file = self.project_dir / f".env.{self.environment}"
+        compose_override = self.project_dir / f"docker-compose.{self.environment}.yml"
 
-        cmd = ["docker", "compose", "-f", str(self.compose_file)] + command
+        cmd = ["docker", "compose", "--env-file", str(env_file), "-f", str(self.compose_file)]
+
+        # Add override file if it exists
+        if compose_override.exists():
+            cmd.extend(["-f", str(compose_override)])
+
+        cmd.extend(command)
         logger.info(f"Running command: {' '.join(cmd)}")
 
-        return subprocess.run(cmd, cwd=self.project_dir, env=env, capture_output=True, text=True, timeout=timeout)
+        return subprocess.run(cmd, cwd=self.project_dir, capture_output=True, text=True, timeout=timeout)
 
     def build_images(self) -> bool:
         """Build all required container images."""
@@ -208,7 +182,12 @@ class DockerComposeManager:
         result = self._run_compose_command(["ps", "--format", "json"])
         if result.returncode == 0:
             try:
-                containers = json.loads(result.stdout)
+                # Docker compose returns JSON lines, not a single array
+                containers = []
+                for line in result.stdout.strip().split("\n"):
+                    if line.strip():
+                        containers.append(json.loads(line))
+
                 status = {}
                 for container in containers:
                     service = container.get("Service", "unknown")
@@ -219,8 +198,9 @@ class DockerComposeManager:
                         "created": container.get("CreatedAt", ""),
                     }
                 return status
-            except json.JSONDecodeError:
-                logger.error("Could not parse service status")
+            except json.JSONDecodeError as e:
+                logger.error(f"Could not parse service status: {e}")
+                logger.debug(f"Raw output: {result.stdout}")
                 return {}
         return {}
 
@@ -307,14 +287,18 @@ def performance_tracker():
 
 
 @pytest.fixture(scope="function")
-def isolated_environment(compose_manager, performance_tracker):
+def isolated_environment(compose_manager, performance_tracker, development_environment, test_isolation):
     """Provide an isolated test environment for each test."""
     performance_tracker.start_timer("environment_setup")
 
-    with compose_manager.isolated_environment() as env:
-        setup_time = performance_tracker.end_timer("environment_setup")
-        logger.info(f"Test environment setup completed in {setup_time:.2f} seconds")
-        yield env
+    # Use development environment with test isolation
+    # This avoids the complexity of spinning up separate containers
+    setup_time = performance_tracker.end_timer("environment_setup")
+    logger.info(f"Test environment setup completed in {setup_time:.2f} seconds")
+
+    # Return the compose manager configured for development environment
+    compose_manager.environment = "dev"
+    yield compose_manager
 
 
 class TestContainerIntegration:

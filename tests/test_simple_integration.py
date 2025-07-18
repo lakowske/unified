@@ -1,7 +1,7 @@
-"""Simple integration tests for podman-compose validation.
+"""Simple integration tests for docker compose validation.
 
 This module provides basic integration tests to validate that the test framework
-works correctly with podman-compose and that basic container functionality is working.
+works correctly with docker compose and that basic container functionality is working.
 """
 
 import logging
@@ -24,7 +24,7 @@ class SimpleDockerManager:
         self.compose_file = project_dir / "docker-compose.yml"
 
     def _run_compose_command(self, command: list, timeout: int = 300) -> subprocess.CompletedProcess:
-        """Run a podman-compose command with proper environment setup."""
+        """Run a docker compose command with proper environment setup."""
         env = os.environ.copy()
         env.update(
             {
@@ -36,7 +36,7 @@ class SimpleDockerManager:
             }
         )
 
-        cmd = ["podman-compose", "-f", str(self.compose_file)] + command
+        cmd = ["docker", "compose", "-f", str(self.compose_file)] + command
         logger.info(f"Running command: {' '.join(cmd)}")
 
         return subprocess.run(cmd, cwd=self.project_dir, env=env, capture_output=True, text=True, timeout=timeout)
@@ -57,7 +57,7 @@ class SimpleDockerManager:
         """Get status of a specific container."""
         try:
             result = subprocess.run(
-                ["podman", "ps", "--filter", f"name={service}-{self.environment}", "--format", "json"],
+                ["docker", "ps", "--filter", f"name={service}-{self.environment}", "--format", "json"],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -74,7 +74,7 @@ class SimpleDockerManager:
     def execute_in_container(self, service: str, command: list) -> subprocess.CompletedProcess:
         """Execute command in container."""
         container_name = f"{service}-{self.environment}"
-        cmd = ["podman", "exec", container_name] + command
+        cmd = ["docker", "exec", container_name] + command
         return subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
 
@@ -240,7 +240,7 @@ class TestContainerHealthChecks:
     def test_postgres_health_check(self, postgres_container):
         """Test that postgres health check is working."""
         # Get container details
-        result = subprocess.run(["podman", "inspect", "postgres-test"], capture_output=True, text=True, timeout=30)
+        result = subprocess.run(["docker", "inspect", "postgres-test"], capture_output=True, text=True, timeout=30)
 
         assert result.returncode == 0, f"Container inspect failed: {result.stderr}"
 
@@ -255,7 +255,7 @@ class TestContainerHealthChecks:
 
     def test_container_resource_limits(self, postgres_container):
         """Test that container resource limits are applied."""
-        result = subprocess.run(["podman", "inspect", "postgres-test"], capture_output=True, text=True, timeout=30)
+        result = subprocess.run(["docker", "inspect", "postgres-test"], capture_output=True, text=True, timeout=30)
 
         assert result.returncode == 0, f"Container inspect failed: {result.stderr}"
 
@@ -281,7 +281,7 @@ class TestPerformanceBaseline:
 
     def test_container_startup_time(self, project_dir):
         """Test container startup performance."""
-        manager = SimplePodmanManager(project_dir, environment="perftest")
+        manager = SimpleDockerManager(project_dir, environment="perftest")
 
         try:
             # Clean up first

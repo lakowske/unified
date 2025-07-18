@@ -126,7 +126,7 @@
 
                 <div class="credentials">
                     <strong>Create Admin User:</strong><br>
-                    <code>poststack service create-user --username admin --password [secure-password] --email admin@example.com --role admin</code>
+                    <code>curl -X POST http://localhost:8080/api/v1/admin/create_user -H "Content-Type: application/json" -H "X-API-Key: $(docker exec apache-dev cat /var/local/unified_api_key)" -d '{"username": "admin", "password": "secure-password", "email": "admin@example.com", "role": "admin"}'</code>
                 </div>
             </div>
 
@@ -137,7 +137,7 @@
 
                 <div class="credentials">
                     <strong>Create Regular User:</strong><br>
-                    <code>poststack service create-user --username testuser --password [secure-password] --email user@example.com</code>
+                    <code>curl -X POST http://localhost:8080/api/v1/admin/create_user -H "Content-Type: application/json" -H "X-API-Key: $(docker exec apache-dev cat /var/local/unified_api_key)" -d '{"username": "testuser", "password": "secure-password", "email": "user@example.com", "role": "user"}'</code>
                 </div>
             </div>
         </div>
@@ -149,7 +149,7 @@
             <ul>
                 <li><strong>Authentication:</strong> Apache mod_authn_dbd with PostgreSQL</li>
                 <li><strong>Database:</strong> Unified user schema with role-based access</li>
-                <li><strong>User Management:</strong> Dynamic user creation via poststack service commands</li>
+                <li><strong>User Management:</strong> Dynamic user creation via REST API with curl commands</li>
                 <li><strong>Password Storage:</strong> Service-specific password hashing in normalized schema</li>
                 <li><strong>Integration:</strong> Apache authentication views query unified.apache_auth with API key secured user management</li>
             </ul>
@@ -160,9 +160,9 @@
         <h2>🧪 Test Scenarios</h2>
         <p>Test these authentication scenarios:</p>
         <ul>
-            <li><strong>Create Users:</strong> Use <code>poststack service create-user</code> to create test accounts</li>
-            <li><strong>List Users:</strong> Use <code>poststack service list-users</code> to view created accounts</li>
-            <li><strong>Valid Login:</strong> Use credentials from users you created via poststack CLI</li>
+            <li><strong>Create Users:</strong> Use curl commands to create test accounts via REST API</li>
+            <li><strong>List Users:</strong> Use <code>curl -X GET http://localhost:8080/api/v1/admin/list_users -H "X-API-Key: $(docker exec apache-dev cat /var/local/unified_api_key)"</code></li>
+            <li><strong>Valid Login:</strong> Use credentials from users you created via API</li>
             <li><strong>Invalid Login:</strong> Try wrong password or non-existent user</li>
             <li><strong>No Authentication:</strong> Access protected areas without credentials</li>
             <li><strong>Role Access:</strong> Create both admin and regular users to test different access levels</li>
@@ -171,7 +171,7 @@
 
     <footer style="text-align: center; margin-top: 40px; padding: 20px; color: #6c757d;">
         <p>Unified Project - PostgreSQL Multi-Service Authentication Demo</p>
-        <p>Powered by Apache, PostgreSQL, and Poststack</p>
+        <p>Powered by Apache, PostgreSQL, and Docker Compose</p>
     </footer>
 </body>
 </html>

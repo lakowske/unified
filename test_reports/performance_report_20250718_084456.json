@@ -1,0 +1,25 @@
+{
+  "summary": {
+    "total_tests": 0,
+    "passed_tests": 0,
+    "failed_tests": 0,
+    "total_duration": 0,
+    "average_duration": 0
+  },
+  "baselines": {
+    "api_response_time": 0.5,
+    "database_query_time": 0.1,
+    "container_startup_time": 30.0,
+    "concurrent_api_requests": 10,
+    "database_connection_time": 0.05
+  },
+  "results": {
+    "timestamp": "2025-07-18T08:44:56.116695",
+    "version": "1.0.0",
+    "environment": "development",
+    "tests": {}
+  },
+  "recommendations": [
+    "\u2705 All performance tests are within acceptable baselines"
+  ]
+}

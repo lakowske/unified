@@ -21,6 +21,16 @@ A comprehensive containerized infrastructure project providing integrated mail, 
 - **Orchestration**: `docker compose` command (Docker Compose v2.38.2+)
 - **Migration system**: Flyway for enterprise-grade database migrations
 
+## Development History
+
+For detailed information about issues encountered and solutions implemented during development, see:
+
+**[Development Journal](development-journal.md)** - Comprehensive record of roadblocks, solutions, and lessons learned throughout the project evolution.
+
+**⚠️ IMPORTANT for Claude Code Sessions:**
+
+Claude assistants MUST update `development-journal.md` whenever new roadblocks, issues, or significant challenges arise during development and testing. This ensures continuity across sessions and helps future development work learn from past solutions.
+
 ## Development Workflow
 
 ### Environment Management
@@ -258,13 +268,3 @@ docker run --rm -v {volume}:/mnt alpine ls -la /mnt
 - **Reliability**: Resolved migration tracking conflicts and DNS container permission issues
 - **Performance**: Migrations complete in milliseconds with zero conflicts using Flyway's proven algorithms
 - **Security**: Maintained non-root container security throughout infrastructure
-
-## Development History
-
-For detailed information about issues encountered and solutions implemented during development, see:
-
-**[Development Journal](development-journal.md)** - Comprehensive record of roadblocks, solutions, and lessons learned throughout the project evolution.
-
-**⚠️ IMPORTANT for Claude Code Sessions:**
-
-Claude assistants MUST update `development-journal.md` whenever new roadblocks, issues, or significant challenges arise during development and testing. This ensures continuity across sessions and helps future development work learn from past solutions.

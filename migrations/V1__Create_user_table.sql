@@ -245,6 +245,6 @@ CREATE TRIGGER trigger_users_updated_at
 -- No sample data is included in this migration.
 -- Users should be created via the admin API endpoints:
 -- - POST /api/v1/admin/create_user.php
--- - Or via poststack CLI: `poststack service create-user`
+-- - Or via REST API: `curl -X POST http://localhost:8080/api/v1/admin/create_user`
 --
 -- This ensures proper password hashing and security practices.

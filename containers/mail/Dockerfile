@@ -1,7 +1,7 @@
 # Mail Server Container with Dovecot and Postfix for Unified Project
-# Based on poststack/base-debian for consistency
+# Based on unified/base-debian for consistency
 
-FROM localhost/poststack/base-debian:latest
+FROM localhost/unified/base-debian:latest
 
 # Install mail server packages
 RUN apt-get update && apt-get install -y --no-install-recommends \

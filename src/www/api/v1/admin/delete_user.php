@@ -3,7 +3,7 @@
  * User Deletion API Endpoint
  *
  * Deletes users from the unified.users table with API key authentication.
- * Used by poststack service operations for user management.
+ * Used by unified service operations for user management.
  */
 
 header('Content-Type: application/json');
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
  * Validate API key from request headers
  */
 function validateApiKey() {
-    $api_key_file = '/var/local/poststack_api_key';
+    $api_key_file = '/var/local/unified_api_key';
 
     if (!file_exists($api_key_file)) {
         error_log("API key file not found: $api_key_file");
@@ -101,7 +101,7 @@ try {
         $_SERVER['DB_NAME'] ?? 'unified_dev'
     );
 
-    $pdo = new PDO($dsn, $_SERVER['DB_USER'] ?? 'poststack', $_SERVER['DB_PASSWORD'] ?? 'poststack_dev');
+    $pdo = new PDO($dsn, $_SERVER['DB_USER'] ?? 'unified', $_SERVER['DB_PASSWORD'] ?? 'unified_dev');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Find the user to delete
