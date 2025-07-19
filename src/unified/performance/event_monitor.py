@@ -328,6 +328,11 @@ class ContainerEventMonitor:
         Returns:
             True if the event should be processed
         """
+        # Exclude our temporary log collection containers
+        if event.container_name.startswith("log-collector-"):
+            logger.debug(f"Excluding log collector container: {event.container_name}")
+            return False
+
         if not self.container_filters:
             return True
 

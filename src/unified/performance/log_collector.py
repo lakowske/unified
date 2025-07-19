@@ -8,7 +8,7 @@ import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -165,8 +165,10 @@ class ContainerLogCollector:
 
         return info
 
-    def collect_server_logs(self, environment_name: str) -> Dict[str, str]:
-        """Collect server logs from /data/logs volume.
+    def collect_server_logs(self, environment_name: str) -> Dict[str, Any]:
+        """Collect server logs from the logs volume after containers are stopped.
+
+        Uses a temporary container with a predictable name to access Docker volume data.
 
         Args:
             environment_name: Name of the environment to collect logs from
@@ -174,34 +176,31 @@ class ContainerLogCollector:
         Returns:
             Dictionary with server log collection results
         """
-        logger.info(f"Collecting server logs from /data/logs volume for {environment_name}")
+        logger.info(f"Collecting server logs from logs volume for {environment_name}")
 
         try:
-            # Use docker run to access the logs volume and copy contents
-            volume_name = f"logs-{environment_name}"
-
             # Create a timestamp for this collection
             timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
             collection_dir = self.server_logs_dir / f"{environment_name}-{timestamp}"
             collection_dir.mkdir(parents=True, exist_ok=True)
 
-            # Use docker run with the logs volume to copy all log files
+            # Use a deterministic container name for the log collection
+            volume_name = f"logs-{environment_name}"
+            log_collector_name = f"log-collector-{environment_name}-{timestamp}"
+
+            # Use docker run with a specific name to copy all log files
             copy_cmd = [
                 "docker",
                 "run",
                 "--rm",
-                "-v",
-                f"{volume_name}:/source:ro",
-                "-v",
-                f"{collection_dir.absolute()}:/dest",
+                "--name", log_collector_name,
+                "-v", f"{volume_name}:/source:ro",
+                "-v", f"{collection_dir.absolute()}:/dest",
                 "alpine:latest",
-                "sh",
-                "-c",
-                "cp -r /source/* /dest/ 2>/dev/null || echo 'No logs found'",
+                "sh", "-c", "cp -r /source/* /dest/ 2>/dev/null || echo 'No logs found'",
             ]
 
-            logger.debug(f"Running command: {' '.join(copy_cmd)}")
-
+            logger.debug(f"Running log collection container: {log_collector_name}")
             copy_result = subprocess.run(copy_cmd, capture_output=True, text=True, timeout=60)
 
             if copy_result.returncode == 0:
@@ -217,6 +216,7 @@ class ContainerLogCollector:
                     f.write(f"Environment: {environment_name}\n")
                     f.write(f"Collection Time: {datetime.now().isoformat()}\n")
                     f.write(f"Volume: {volume_name}\n")
+                    f.write(f"Log Collector Container: {log_collector_name}\n")
                     f.write(f"Files Collected: {len(log_files)}\n")
                     f.write(f"Total Size: {total_size} bytes\n")
                     f.write(f"Collection Directory: {collection_dir}\n\n")
@@ -237,16 +237,17 @@ class ContainerLogCollector:
                     "total_size": total_size,
                     "volume_name": volume_name,
                 }
-            error_msg = f"Failed to copy logs: {copy_result.stderr}"
-            logger.warning(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "collection_dir": None,
-                "files_collected": 0,
-                "total_size": 0,
-                "volume_name": volume_name,
-            }
+            else:
+                error_msg = f"Failed to copy logs: {copy_result.stderr}"
+                logger.warning(error_msg)
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "collection_dir": None,
+                    "files_collected": 0,
+                    "total_size": 0,
+                    "volume_name": volume_name,
+                }
 
         except subprocess.TimeoutExpired:
             error_msg = f"Timeout copying server logs for {environment_name}"

@@ -229,9 +229,7 @@ class UnifiedEnvironmentManager:
             env_dir = files["env_dir"]
             if env_dir is None:
                 raise ValueError(f"Environment directory not found for {environment}")
-            result = subprocess.run(
-                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=timeout
-            )
+            result = subprocess.run(cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=timeout)
 
             if result.returncode == 0:
                 logger.info(f"Environment '{environment}' started successfully")
@@ -290,9 +288,7 @@ class UnifiedEnvironmentManager:
             env_dir = files["env_dir"]
             if env_dir is None:
                 raise ValueError(f"Environment directory not found for {environment}")
-            result = subprocess.run(
-                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120
-            )
+            result = subprocess.run(cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120)
 
             if result.returncode == 0:
                 logger.info(f"Environment '{environment}' stopped successfully")
@@ -343,9 +339,7 @@ class UnifiedEnvironmentManager:
             env_dir = files["env_dir"]
             if env_dir is None:
                 raise ValueError(f"Environment directory not found for {environment}")
-            result = subprocess.run(
-                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120
-            )
+            result = subprocess.run(cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120)
 
             if result.returncode == 0:
                 logger.info(f"Containers for environment '{environment}' stopped successfully")
@@ -402,9 +396,7 @@ class UnifiedEnvironmentManager:
             env_dir = files["env_dir"]
             if env_dir is None:
                 raise ValueError(f"Environment directory not found for {environment}")
-            result = subprocess.run(
-                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120
-            )
+            result = subprocess.run(cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120)
 
             if result.returncode == 0:
                 logger.info(f"Containers for environment '{environment}' removed successfully")
@@ -546,9 +538,7 @@ class UnifiedEnvironmentManager:
             env_dir = files["env_dir"]
             if env_dir is None:
                 raise ValueError(f"Environment directory not found for {environment}")
-            result = subprocess.run(
-                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=30
-            )
+            result = subprocess.run(cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=30)
 
             if result.returncode == 0:
                 import json

@@ -14,14 +14,14 @@ shutdown_handler() {
     if [ -n "$APACHE_PID" ] && kill -0 "$APACHE_PID" 2>/dev/null; then
         echo "Sending SIGTERM to Apache (PID: $APACHE_PID)"
         kill -TERM "$APACHE_PID"
-        
+
         # Wait for Apache to shutdown gracefully (max 30 seconds)
         local count=0
         while [ $count -lt 30 ] && kill -0 "$APACHE_PID" 2>/dev/null; do
             sleep 1
             count=$((count + 1))
         done
-        
+
         # Force kill if still running
         if kill -0 "$APACHE_PID" 2>/dev/null; then
             echo "Apache didn't shutdown gracefully, sending SIGKILL"
