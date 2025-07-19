@@ -10,6 +10,7 @@ import logging
 import subprocess
 import threading
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -49,14 +50,17 @@ class ContainerEvent:
 class ContainerEventMonitor:
     """Monitors Docker events for container lifecycle tracking."""
 
-    def __init__(self, container_filters: Optional[List[str]] = None):
+    def __init__(self, container_filters: Optional[List[str]] = None, capture_all_events: bool = False):
         """Initialize container event monitor.
 
         Args:
-            container_filters: List of container name patterns to monitor
+            container_filters: List of container name patterns to monitor (ignored if capture_all_events=True)
+            capture_all_events: If True, capture ALL Docker events regardless of filters
         """
         self.container_filters = container_filters or []
+        self.capture_all_events = capture_all_events
         self.events: List[ContainerEvent] = []
+        self.all_events_log: List[str] = []  # Raw event JSON strings for complete logging
         self.event_callbacks: List[Callable[[ContainerEvent], None]] = []
         self.monitoring = False
         self.monitor_thread: Optional[threading.Thread] = None
@@ -125,12 +129,14 @@ class ContainerEventMonitor:
             # Build docker events command
             cmd = ["docker", "events", "--format", "json"]
 
-            # Add container filters if specified
-            if self.container_filters:
+            # Add container filters if specified and not capturing all events
+            if self.container_filters and not self.capture_all_events:
                 for container in self.container_filters:
                     cmd.extend(["--filter", f"container={container}"])
 
             logger.info(f"Starting docker events monitoring with command: {' '.join(cmd)}")
+            if self.capture_all_events:
+                logger.info("Capturing ALL Docker events for comprehensive logging")
 
             # Start the process
             self.process = subprocess.Popen(
@@ -148,8 +154,16 @@ class ContainerEventMonitor:
                     if not line:
                         break
 
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    # Always store raw event for comprehensive logging
+                    if self.capture_all_events:
+                        self.all_events_log.append(line)
+
                     # Parse event JSON
-                    event_data = json.loads(line.strip())
+                    event_data = json.loads(line)
 
                     # Filter for container events
                     if event_data.get("Type") == "container":
@@ -157,7 +171,9 @@ class ContainerEventMonitor:
 
                         # Check if this is a lifecycle event we care about
                         if event.action in self.lifecycle_events:
-                            self._process_event(event)
+                            # Process all events if capture_all_events, otherwise apply filters
+                            if self.capture_all_events or self._should_process_event(event):
+                                self._process_event(event)
 
                 except json.JSONDecodeError as e:
                     logger.warning(f"Failed to parse event JSON: {e}")
@@ -274,6 +290,7 @@ class ContainerEventMonitor:
     def clear_events(self) -> None:
         """Clear all stored events."""
         self.events.clear()
+        self.all_events_log.clear()
         logger.info("Cleared all stored events")
 
     def get_event_summary(self) -> Dict[str, Any]:
@@ -301,3 +318,56 @@ class ContainerEventMonitor:
                 summary["event_types"][action] = summary["event_types"].get(action, 0) + 1
 
         return summary
+
+    def _should_process_event(self, event: ContainerEvent) -> bool:
+        """Check if an event should be processed based on container filters.
+
+        Args:
+            event: The container event to check
+
+        Returns:
+            True if the event should be processed
+        """
+        if not self.container_filters:
+            return True
+
+        # Check if the container name matches any of our filters
+        for container_filter in self.container_filters:
+            if container_filter in event.container_name:
+                return True
+
+        return False
+
+    def save_full_event_log(self, output_path: Path) -> Path:
+        """Save the complete event log to a file.
+
+        Args:
+            output_path: Path where to save the event log
+
+        Returns:
+            Path to the saved event log file
+        """
+        output_path = Path(output_path)
+
+        with open(output_path, "w") as f:
+            # Write header
+            f.write("# Docker Events Log\n")
+            f.write(f"# Monitoring started: {datetime.now().isoformat()}\n")
+            f.write(f"# Capture all events: {self.capture_all_events}\n")
+            f.write(f"# Container filters: {self.container_filters}\n")
+            f.write(f"# Total raw events: {len(self.all_events_log)}\n")
+            f.write(f"# Total processed events: {len(self.events)}\n")
+            f.write("# ================================================================================\n\n")
+
+            # Write all raw events
+            for event_json in self.all_events_log:
+                f.write(f"{event_json}\n")
+
+        logger.info(f"Saved {len(self.all_events_log)} raw events to {output_path}")
+        return output_path
+
+    def clear_all_events(self) -> None:
+        """Clear all stored events and raw event logs."""
+        self.events.clear()
+        self.all_events_log.clear()
+        logger.debug("Cleared all stored events")

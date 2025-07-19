@@ -8,7 +8,6 @@ import os
 import signal
 import subprocess
 import sys
-import time
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -184,9 +183,21 @@ class CertificateWatcher:
                 cur.execute("LISTEN certificate_change")
                 logger.info("Listening for certificate change notifications...")
 
+                # Do an initial check for certificate updates at startup
+                needs_update, new_cert_type = self.check_for_certificate_updates()
+                if needs_update:
+                    logger.info(f"Initial certificate update detected: {new_cert_type}")
+                    self.reload_ssl_configuration()
+
                 while self.running:
-                    # Check for notifications with timeout
-                    if self.db_connection.poll() is not None:
+                    # Use select() for efficient, interruptible waiting
+                    import select
+
+                    # Wait for notifications with 1 second timeout for signal responsiveness
+                    ready = select.select([self.db_connection], [], [], 1.0)
+
+                    if ready[0]:  # Database connection has data
+                        self.db_connection.poll()
                         while self.db_connection.notifies:
                             notify = self.db_connection.notifies.pop(0)
                             logger.info(f"Received notification: {notify.channel} - {notify.payload}")
@@ -196,13 +207,7 @@ class CertificateWatcher:
                                 logger.info("Certificate change notification received for mail service")
                                 self.handle_certificate_change()
 
-                    # Also periodically check for certificate updates
-                    needs_update, new_cert_type = self.check_for_certificate_updates()
-                    if needs_update:
-                        logger.info(f"Certificate update detected: {new_cert_type}")
-                        self.reload_ssl_configuration()
-
-                    time.sleep(5)  # Check every 5 seconds
+                    # No polling needed - purely event-driven via LISTEN/NOTIFY
 
         except Exception as e:
             logger.error(f"Error listening for notifications: {e}")

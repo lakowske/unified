@@ -219,7 +219,7 @@ class UnifiedEnvironmentManager:
             default_compose = self.project_dir / "docker-compose.yml"
             if default_compose.exists():
                 cmd.extend(["-f", str(default_compose.resolve())])
-            
+
             # Add environment-specific compose file as override if it exists
             if files["compose_file"]:
                 cmd.extend(["-f", str(files["compose_file"].resolve())])
@@ -277,7 +277,7 @@ class UnifiedEnvironmentManager:
             default_compose = self.project_dir / "docker-compose.yml"
             if default_compose.exists():
                 cmd.extend(["-f", str(default_compose.resolve())])
-            
+
             # Add environment-specific compose file as override if it exists
             if files["compose_file"]:
                 cmd.extend(["-f", str(files["compose_file"].resolve())])
@@ -301,6 +301,186 @@ class UnifiedEnvironmentManager:
         except Exception as e:
             logger.error(f"Error stopping environment '{environment}': {e}")
             return {"success": False, "message": f"Error stopping environment '{environment}': {e}"}
+
+    def stop_containers_only(self, environment: str) -> Dict[str, Any]:
+        """Stop containers without removing them or volumes.
+
+        Args:
+            environment: Name of the environment to stop
+
+        Returns:
+            Dictionary with success status and message
+        """
+        logger.info(f"Stopping containers for environment '{environment}'")
+
+        files = self.get_environment_files(environment)
+
+        if not files["env_file"]:
+            return {"success": False, "message": f"Environment '{environment}' files not found"}
+
+        try:
+            # Build the docker-compose command
+            cmd = ["docker", "compose"]
+
+            # Add env file
+            cmd.extend(["--env-file", str(files["env_file"].resolve())])
+
+            # Add compose files - always start with base, then add environment-specific overrides
+            default_compose = self.project_dir / "docker-compose.yml"
+            if default_compose.exists():
+                cmd.extend(["-f", str(default_compose.resolve())])
+
+            # Add environment-specific compose file as override if it exists
+            if files["compose_file"]:
+                cmd.extend(["-f", str(files["compose_file"].resolve())])
+
+            # Use stop command (not down) to preserve containers
+            cmd.append("stop")
+
+            # Execute command from environment directory
+            result = subprocess.run(
+                cmd, cwd=str(files["env_dir"].resolve()), capture_output=True, text=True, timeout=120
+            )
+
+            if result.returncode == 0:
+                logger.info(f"Containers for environment '{environment}' stopped successfully")
+                return {"success": True, "message": f"Containers for environment '{environment}' stopped successfully"}
+            logger.error(f"Failed to stop containers for environment '{environment}': {result.stderr}")
+            return {
+                "success": False,
+                "message": f"Failed to stop containers for environment '{environment}': {result.stderr}",
+            }
+
+        except Exception as e:
+            logger.error(f"Error stopping containers for environment '{environment}': {e}")
+            return {"success": False, "message": f"Error stopping containers for environment '{environment}': {e}"}
+
+    def remove_containers_and_volumes(self, environment: str, remove_volumes: bool = True) -> Dict[str, Any]:
+        """Remove stopped containers and optionally volumes.
+
+        Args:
+            environment: Name of the environment to clean up
+            remove_volumes: Whether to remove volumes
+
+        Returns:
+            Dictionary with success status and message
+        """
+        logger.info(f"Removing containers for environment '{environment}' (remove_volumes={remove_volumes})")
+
+        files = self.get_environment_files(environment)
+
+        if not files["env_file"]:
+            return {"success": False, "message": f"Environment '{environment}' files not found"}
+
+        try:
+            # Build the docker-compose command
+            cmd = ["docker", "compose"]
+
+            # Add env file
+            cmd.extend(["--env-file", str(files["env_file"].resolve())])
+
+            # Add compose files - always start with base, then add environment-specific overrides
+            default_compose = self.project_dir / "docker-compose.yml"
+            if default_compose.exists():
+                cmd.extend(["-f", str(default_compose.resolve())])
+
+            # Add environment-specific compose file as override if it exists
+            if files["compose_file"]:
+                cmd.extend(["-f", str(files["compose_file"].resolve())])
+
+            # Use down command to remove containers and optionally volumes
+            cmd.append("down")
+            if remove_volumes:
+                cmd.append("-v")
+
+            # Execute command from environment directory
+            result = subprocess.run(
+                cmd, cwd=str(files["env_dir"].resolve()), capture_output=True, text=True, timeout=120
+            )
+
+            if result.returncode == 0:
+                logger.info(f"Containers for environment '{environment}' removed successfully")
+                return {"success": True, "message": f"Containers for environment '{environment}' removed successfully"}
+            logger.error(f"Failed to remove containers for environment '{environment}': {result.stderr}")
+            return {
+                "success": False,
+                "message": f"Failed to remove containers for environment '{environment}': {result.stderr}",
+            }
+
+        except Exception as e:
+            logger.error(f"Error removing containers for environment '{environment}': {e}")
+            return {"success": False, "message": f"Error removing containers for environment '{environment}': {e}"}
+
+    def collect_container_logs(self, environment: str) -> Dict[str, Any]:
+        """Collect logs from all containers in an environment.
+
+        Args:
+            environment: Name of the environment
+
+        Returns:
+            Dictionary with success status and collected log information
+        """
+        logger.info(f"Collecting container logs for environment '{environment}'")
+
+        # Get container names from environment configuration
+        try:
+            env_config = self.config.load_environment(environment)
+            expected_containers = self._get_expected_containers(env_config, environment)
+
+            # Import log collector
+            from ..performance.log_collector import ContainerLogCollector
+
+            # Create output directory for this environment's logs
+            logs_dir = Path("/tmp") / f"container-logs-{environment}"
+            log_collector = ContainerLogCollector(logs_dir)
+
+            # Collect logs
+            collection_results = log_collector.collect_container_logs(expected_containers)
+            system_info = log_collector.collect_system_info()
+            summary_file = log_collector.save_collection_summary(collection_results, system_info)
+
+            return {
+                "success": True,
+                "message": f"Collected logs for {len(expected_containers)} containers",
+                "containers": expected_containers,
+                "collection_results": collection_results,
+                "summary_file": str(summary_file),
+                "logs_directory": str(logs_dir),
+            }
+
+        except Exception as e:
+            logger.error(f"Error collecting container logs for environment '{environment}': {e}")
+            return {
+                "success": False,
+                "message": f"Error collecting container logs: {e}",
+                "containers": [],
+                "collection_results": {},
+                "summary_file": None,
+                "logs_directory": None,
+            }
+
+    def _get_expected_containers(self, env_config: Dict[str, Any], environment_name: str) -> List[str]:
+        """Get list of expected containers for an environment.
+
+        Args:
+            env_config: Environment configuration
+            environment_name: Environment name
+
+        Returns:
+            List of expected container names
+        """
+        expected_containers = []
+
+        # Extract from compose configuration
+        compose_config = env_config.get("compose_config", {})
+        services = compose_config.get("services", {})
+
+        for service_name in services.keys():
+            # Generate expected container name
+            container_name = f"{service_name}-{environment_name}"
+            expected_containers.append(container_name)
+
+        return expected_containers
 
     def cleanup_environment(self, environment: str) -> Dict[str, Any]:
         """Clean up an environment completely.
@@ -346,7 +526,7 @@ class UnifiedEnvironmentManager:
             default_compose = self.project_dir / "docker-compose.yml"
             if default_compose.exists():
                 cmd.extend(["-f", str(default_compose.resolve())])
-            
+
             # Add environment-specific compose file as override if it exists
             if files["compose_file"]:
                 cmd.extend(["-f", str(files["compose_file"].resolve())])

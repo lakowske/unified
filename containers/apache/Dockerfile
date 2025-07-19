@@ -69,4 +69,4 @@ HEALTHCHECK --interval=15s --timeout=2s --start-period=1s --retries=3 \
 
 # Set entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["apache2ctl", "-D", "FOREGROUND"]
+CMD ["/usr/sbin/apache2", "-D", "FOREGROUND"]

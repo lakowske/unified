@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 from ..environments.manager import UnifiedEnvironmentManager
 from .event_monitor import ContainerEventMonitor
 from .health_watcher import HealthCheckWatcher
+from .log_collector import ContainerLogCollector
 from .performance_collector import PerformanceCollector
 
 logger = logging.getLogger(__name__)
@@ -82,9 +83,13 @@ class PerformanceTestRunner:
 
             self.environment_manager.config = TestEnvironmentConfig(self.project_dir)
 
-        self.event_monitor = ContainerEventMonitor()
+        # Initialize monitoring with comprehensive event capture
+        self.event_monitor = ContainerEventMonitor(capture_all_events=True)
         self.health_watcher = HealthCheckWatcher()
         self.performance_collector = PerformanceCollector(self.output_dir)
+
+        # Current test run directory (set when test starts)
+        self.current_run_dir: Optional[Path] = None
 
         # Test configuration
         self.test_config = {
@@ -122,6 +127,26 @@ class PerformanceTestRunner:
         self.test_config.update(kwargs)
         logger.info(f"Test configuration updated: {kwargs}")
 
+    def _create_test_run_directory(self, environment_name: str) -> Path:
+        """Create a timestamped directory for the current test run.
+
+        Args:
+            environment_name: Name of the environment being tested
+
+        Returns:
+            Path to the created run directory
+        """
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        run_dir_name = f"test-run-{environment_name}-{timestamp}"
+        run_dir = self.output_dir / run_dir_name
+
+        # Create directory structure
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "container-logs").mkdir(exist_ok=True)
+
+        logger.info(f"Created test run directory: {run_dir}")
+        return run_dir
+
     def run_environment_performance_test(
         self, environment_name: str, iterations: Optional[int] = None, include_warmup: bool = True
     ) -> Dict[str, Any]:
@@ -144,6 +169,9 @@ class PerformanceTestRunner:
         if environment_name not in self.environment_manager.list_environments():
             raise ValueError(f"Environment '{environment_name}' not found")
 
+        # Create timestamped run directory
+        self.current_run_dir = self._create_test_run_directory(environment_name)
+
         # Initialize test results
         test_results = {
             "environment": environment_name,
@@ -152,6 +180,7 @@ class PerformanceTestRunner:
             "warmup_included": include_warmup,
             "results": [],
             "summary": {},
+            "run_directory": str(self.current_run_dir),
         }
 
         try:
@@ -273,38 +302,103 @@ class PerformanceTestRunner:
             logger.error(f"Startup phase failed for iteration {iteration_name}: {e}")
 
         finally:
-            # Always attempt shutdown and cleanup, regardless of startup success
+            # NEW LIFECYCLE: stop → collect logs → destroy → monitoring stops
+            log_collection_results = {}
+
             try:
-                # Test shutdown performance (monitoring still running)
+                # Step 1: Stop containers only (don't destroy yet) - monitoring still running
+                logger.info(f"Step 1: Stopping containers for {environment_name}")
                 shutdown_start = time.time()
-                shutdown_result = self.environment_manager.stop_environment(environment_name)
+                shutdown_result = self.environment_manager.stop_containers_only(environment_name)
                 shutdown_end = time.time()
                 shutdown_time = shutdown_end - shutdown_start
 
                 if shutdown_result.get("success", False):
                     shutdown_success = True
-                    logger.info(f"Environment {environment_name} shutdown completed")
+                    logger.info(f"Containers for {environment_name} stopped successfully")
                 else:
-                    logger.warning(f"Shutdown had issues: {shutdown_result.get('message', 'Unknown error')}")
+                    logger.warning(f"Container stop had issues: {shutdown_result.get('message', 'Unknown error')}")
 
             except Exception as e:
-                logger.error(f"Shutdown failed for iteration {iteration_name}: {e}")
+                logger.error(f"Container stop failed for iteration {iteration_name}: {e}")
 
             try:
-                # Cleanup environment (monitoring still running)
-                cleanup_result = self.environment_manager.cleanup_environment(environment_name)
+                # Step 2: Collect container logs (containers stopped but not destroyed)
+                logger.info(f"Step 2: Collecting container logs for {environment_name}")
+
+                # Create log collector for this test run
+                log_collector = ContainerLogCollector(self.current_run_dir)
+
+                # Collect logs from all expected containers
+                log_collection_results = log_collector.collect_container_logs(expected_containers)
+                system_info = log_collector.collect_system_info()
+
+                logger.info(f"Container logs collected to {self.current_run_dir / 'container-logs'}")
+
+            except Exception as e:
+                logger.error(f"Log collection failed for iteration {iteration_name}: {e}")
+                log_collection_results = {}
+                system_info = {}
+
+            try:
+                # Step 2.5: Collect server logs from /data/logs volume (before volumes are destroyed)
+                logger.info(f"Step 2.5: Collecting server logs from /data/logs volume for {environment_name}")
+
+                # Use the same log collector to collect server logs
+                server_logs_result = log_collector.collect_server_logs(environment_name)
+
+                if server_logs_result["success"]:
+                    logger.info(
+                        f"Server logs collected: {server_logs_result['files_collected']} files ({server_logs_result['total_size']} bytes)"
+                    )
+                else:
+                    logger.warning(f"Server logs collection failed: {server_logs_result['error']}")
+
+                # Save combined summary with both container and server logs
+                summary_file = log_collector.save_collection_summary(
+                    log_collection_results, system_info, server_logs_result
+                )
+
+                logger.info(f"Combined log collection summary saved to {summary_file}")
+
+            except Exception as e:
+                logger.error(f"Server log collection failed for iteration {iteration_name}: {e}")
+                server_logs_result = {"success": False, "error": str(e)}
+                # Save summary with just container logs
+                try:
+                    summary_file = log_collector.save_collection_summary(
+                        log_collection_results, system_info, server_logs_result
+                    )
+                except:
+                    logger.error("Failed to save log collection summary")
+
+            try:
+                # Step 3: Destroy containers and cleanup volumes (monitoring still running)
+                logger.info(f"Step 3: Destroying containers and volumes for {environment_name}")
+                cleanup_result = self.environment_manager.remove_containers_and_volumes(
+                    environment_name, remove_volumes=True
+                )
 
                 if cleanup_result.get("success", False):
                     cleanup_success = True
-                    logger.info(f"Environment {environment_name} cleanup completed")
+                    logger.info(f"Environment {environment_name} destroyed successfully")
                 else:
                     logger.warning(f"Cleanup had issues: {cleanup_result.get('message', 'Unknown error')}")
 
             except Exception as e:
                 logger.error(f"Cleanup failed for iteration {iteration_name}: {e}")
 
-            # Wait a moment for final events to be captured
-            time.sleep(2)
+            # Step 4: Wait for final events and stop monitoring
+            logger.info("Step 4: Stopping monitoring and collecting final data")
+            time.sleep(2)  # Allow final events to be captured
+
+            # Save complete event log to run directory
+            try:
+                events_log_file = self.current_run_dir / "full-events.log"
+                self.event_monitor.save_full_event_log(events_log_file)
+                logger.info(f"Complete event log saved to {events_log_file}")
+            except Exception as e:
+                logger.warning(f"Failed to save complete event log: {e}")
 
             # NOW stop monitoring and collect final data
             self.event_monitor.stop_monitoring()
@@ -318,6 +412,10 @@ class PerformanceTestRunner:
                 # Update startup_performance with final data
                 if final_performance:
                     startup_performance.update(final_performance)
+
+                # Add log collection results to performance data
+                startup_performance["log_collection"] = log_collection_results
+
             except Exception as e:
                 logger.warning(f"Final performance data collection failed: {e}")
 
@@ -679,7 +777,7 @@ class PerformanceTestRunner:
         return summary
 
     def save_results(self, results: Dict[str, Any], filename: Optional[str] = None) -> Path:
-        """Save test results to JSON file.
+        """Save test results to JSON file in the current run directory.
 
         Args:
             results: Test results to save
@@ -688,15 +786,24 @@ class PerformanceTestRunner:
         Returns:
             Path to saved file
         """
+        # Use current run directory if available, otherwise fall back to output_dir
+        save_dir = self.current_run_dir if self.current_run_dir else self.output_dir
+
         if not filename:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"performance-test-results-{timestamp}.json"
+            filename = "test-results.json"
 
-        # Save performance collector data
-        collector_file = self.performance_collector.save_performance_data()
+        # Save performance collector data to run directory
+        if self.current_run_dir:
+            # Update performance collector output directory for this run
+            original_output_dir = self.performance_collector.output_dir
+            self.performance_collector.output_dir = self.current_run_dir
+            collector_file = self.performance_collector.save_performance_data("performance-metrics.json")
+            self.performance_collector.output_dir = original_output_dir
+        else:
+            collector_file = self.performance_collector.save_performance_data()
 
-        # Save test results
-        results_file = self.output_dir / filename
+        # Save test results to run directory
+        results_file = save_dir / filename
 
         # Convert datetime objects to ISO format
         serialized_results = self._serialize_datetime_objects(results)
@@ -705,6 +812,28 @@ class PerformanceTestRunner:
 
         with open(results_file, "w") as f:
             json.dump(serialized_results, f, indent=2)
+
+        # Create test metadata file
+        if self.current_run_dir:
+            metadata_file = self.current_run_dir / "test-metadata.json"
+            metadata = {
+                "test_run_timestamp": datetime.now().isoformat(),
+                "environment": results.get("environment", "unknown"),
+                "test_configuration": self.test_config,
+                "run_directory": str(self.current_run_dir),
+                "files": {
+                    "test_results": filename,
+                    "performance_metrics": "performance-metrics.json",
+                    "full_events": "full-events.log",
+                    "container_logs_dir": "container-logs/",
+                    "log_collection_summary": "container-logs/log-collection-summary.json",
+                },
+            }
+
+            with open(metadata_file, "w") as f:
+                json.dump(metadata, f, indent=2)
+
+            logger.info(f"Test metadata saved to {metadata_file}")
 
         logger.info(f"Test results saved to {results_file}")
         logger.info(f"Performance data saved to {collector_file}")
