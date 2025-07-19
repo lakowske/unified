@@ -66,11 +66,7 @@ class UnifiedEnvironmentManager:
             f".env.{env_name.replace('_', '-')}",
         ]
 
-        for pattern in env_file_patterns:
-            if (env_dir / pattern).exists():
-                return True
-
-        return False
+        return any((env_dir / pattern).exists() for pattern in env_file_patterns)
 
     def get_environment_files(self, environment: str) -> Dict[str, Optional[Path]]:
         """Get the file paths for an environment.
@@ -230,8 +226,11 @@ class UnifiedEnvironmentManager:
                 cmd.extend(services)
 
             # Execute command from environment directory
+            env_dir = files["env_dir"]
+            if env_dir is None:
+                raise ValueError(f"Environment directory not found for {environment}")
             result = subprocess.run(
-                cmd, cwd=str(files["env_dir"].resolve()), capture_output=True, text=True, timeout=timeout
+                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=timeout
             )
 
             if result.returncode == 0:
@@ -288,8 +287,11 @@ class UnifiedEnvironmentManager:
                 cmd.append("-v")
 
             # Execute command from environment directory
+            env_dir = files["env_dir"]
+            if env_dir is None:
+                raise ValueError(f"Environment directory not found for {environment}")
             result = subprocess.run(
-                cmd, cwd=str(files["env_dir"].resolve()), capture_output=True, text=True, timeout=120
+                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120
             )
 
             if result.returncode == 0:
@@ -338,8 +340,11 @@ class UnifiedEnvironmentManager:
             cmd.append("stop")
 
             # Execute command from environment directory
+            env_dir = files["env_dir"]
+            if env_dir is None:
+                raise ValueError(f"Environment directory not found for {environment}")
             result = subprocess.run(
-                cmd, cwd=str(files["env_dir"].resolve()), capture_output=True, text=True, timeout=120
+                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120
             )
 
             if result.returncode == 0:
@@ -394,8 +399,11 @@ class UnifiedEnvironmentManager:
                 cmd.append("-v")
 
             # Execute command from environment directory
+            env_dir = files["env_dir"]
+            if env_dir is None:
+                raise ValueError(f"Environment directory not found for {environment}")
             result = subprocess.run(
-                cmd, cwd=str(files["env_dir"].resolve()), capture_output=True, text=True, timeout=120
+                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=120
             )
 
             if result.returncode == 0:
@@ -535,8 +543,11 @@ class UnifiedEnvironmentManager:
             cmd.extend(["ps", "--format", "json"])
 
             # Execute command from environment directory
+            env_dir = files["env_dir"]
+            if env_dir is None:
+                raise ValueError(f"Environment directory not found for {environment}")
             result = subprocess.run(
-                cmd, cwd=str(files["env_dir"].resolve()), capture_output=True, text=True, timeout=30
+                cmd, cwd=str(env_dir.resolve()), capture_output=True, text=True, timeout=30
             )
 
             if result.returncode == 0:

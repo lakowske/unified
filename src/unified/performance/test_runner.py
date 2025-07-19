@@ -160,7 +160,7 @@ class PerformanceTestRunner:
         Returns:
             Test results dictionary
         """
-        iterations = iterations or self.test_config["test_iterations"]
+        iterations: int = iterations or self.test_config["test_iterations"]
 
         logger.info(f"Starting performance test for environment: {environment_name}")
         logger.info(f"Test iterations: {iterations}, Warmup: {include_warmup}")
@@ -173,7 +173,7 @@ class PerformanceTestRunner:
         self.current_run_dir = self._create_test_run_directory(environment_name)
 
         # Initialize test results
-        test_results = {
+        test_results: Dict[str, Any] = {
             "environment": environment_name,
             "start_time": datetime.now(),
             "iterations": iterations,
@@ -260,10 +260,10 @@ class PerformanceTestRunner:
             # Start environment
             startup_start = time.time()
             startup_result = self.environment_manager.start_environment(
-                environment_name, timeout=self.test_config["startup_timeout"]
+                environment_name, timeout=int(self.test_config["startup_timeout"])
             )
             startup_end = time.time()
-            startup_time = startup_end - startup_start
+            startup_time: float = startup_end - startup_start
 
             if not startup_result.get("success", False):
                 raise Exception(f"Failed to start environment: {startup_result.get('message', 'Unknown error')}")
@@ -311,7 +311,7 @@ class PerformanceTestRunner:
                 shutdown_start = time.time()
                 shutdown_result = self.environment_manager.stop_containers_only(environment_name)
                 shutdown_end = time.time()
-                shutdown_time = shutdown_end - shutdown_start
+                shutdown_time: float = shutdown_end - shutdown_start
 
                 if shutdown_result.get("success", False):
                     shutdown_success = True
@@ -327,6 +327,8 @@ class PerformanceTestRunner:
                 logger.info(f"Step 2: Collecting container logs for {environment_name}")
 
                 # Create log collector for this test run
+                if self.current_run_dir is None:
+                    raise ValueError("Test run directory not initialized")
                 log_collector = ContainerLogCollector(self.current_run_dir)
 
                 # Collect logs from all expected containers
@@ -363,7 +365,14 @@ class PerformanceTestRunner:
 
             except Exception as e:
                 logger.error(f"Server log collection failed for iteration {iteration_name}: {e}")
-                server_logs_result = {"success": False, "error": str(e)}
+                server_logs_result = {
+                    "success": False,
+                    "error": str(e),
+                    "collection_dir": None,
+                    "files_collected": 0,
+                    "total_size": 0,
+                    "volume_name": f"logs-{environment_name}",
+                }
                 # Save summary with just container logs
                 try:
                     summary_file = log_collector.save_collection_summary(
@@ -394,6 +403,8 @@ class PerformanceTestRunner:
 
             # Save complete event log to run directory
             try:
+                if self.current_run_dir is None:
+                    raise ValueError("Test run directory not initialized")
                 events_log_file = self.current_run_dir / "full-events.log"
                 self.event_monitor.save_full_event_log(events_log_file)
                 logger.info(f"Complete event log saved to {events_log_file}")
@@ -559,6 +570,8 @@ class PerformanceTestRunner:
         """
         # Set environment start time
         env_metrics = self.performance_collector.add_environment(environment_name)
+        if env_metrics is None:
+            raise ValueError(f"Failed to create environment metrics for {environment_name}")
         env_metrics.start_time = datetime.fromtimestamp(startup_start)
 
         # Collect data from event monitor
@@ -660,7 +673,7 @@ class PerformanceTestRunner:
             }
 
         # Calculate per-container healthy time statistics
-        container_healthy_times = {}
+        container_healthy_times: Dict[str, List[float]] = {}
         for result in successful_results:
             for container_name, healthy_time in result.get("healthy_times", {}).items():
                 if container_name not in container_healthy_times:

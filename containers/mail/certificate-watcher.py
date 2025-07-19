@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Mail server certificate watcher for unified project.
+
 Monitors PostgreSQL database for certificate changes and reloads SSL configuration.
 """
 
@@ -20,7 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 class CertificateWatcher:
+    """Watches for certificate changes and manages SSL configuration updates."""
+
     def __init__(self):
+        """Initialize the certificate watcher."""
         self.db_connection = None
         self.current_cert_type = None
         self.current_ssl_enabled = False
@@ -107,7 +111,7 @@ class CertificateWatcher:
 
                 # If we have a specific preference, only check for that type
                 if self.cert_type_preference:
-                    for cert_type, created_at, is_active in available_certs:
+                    for cert_type, _created_at, _is_active in available_certs:
                         if cert_type == self.cert_type_preference:
                             # Check if this certificate is newer than what we're using
                             if cert_type != self.current_cert_type:
@@ -120,7 +124,7 @@ class CertificateWatcher:
                 best_cert_type = None
                 best_priority = 0
 
-                for cert_type, created_at, is_active in available_certs:
+                for cert_type, _created_at, _is_active in available_certs:
                     priority = self.cert_priority.get(cert_type, 0)
                     if priority > best_priority:
                         best_cert_type = cert_type
@@ -146,13 +150,13 @@ class CertificateWatcher:
             logger.info("Reloading SSL configuration...")
 
             # Run the SSL configuration script
-            result = subprocess.run(["/usr/local/bin/configure-ssl.sh"], capture_output=True, text=True, timeout=60)
+            result = subprocess.run(["/usr/local/bin/configure-ssl.sh"], capture_output=True, text=True, timeout=60)  # noqa: S603
 
             if result.returncode == 0:
                 logger.info("SSL configuration updated successfully")
 
                 # Run the SSL reload script for safe service reloads
-                reload_result = subprocess.run(
+                reload_result = subprocess.run(  # noqa: S603
                     ["/usr/local/bin/reload-ssl.sh"], capture_output=True, text=True, timeout=60
                 )
 
